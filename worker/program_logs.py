@@ -1,9 +1,13 @@
-from config.load_config import PROGRAM_LOG
-from datetime import datetime
-from event_handler import manager
-import os
-import json
 import asyncio
+import json
+import os
+from datetime import datetime
+
+from config.load_config import PROGRAM_LOG
+from event_handler import manager
+from worker.create_log_file import touch_files
+
+touch_files()
 
 
 class ProgramLog:
@@ -50,7 +54,10 @@ class ProgramLog:
                                 },
                             }
 
-                            entry = {"t": datetime.now().isoformat(), "m": new_data.strip()}
+                            entry = {
+                                "t": datetime.now().isoformat(),
+                                "m": new_data.strip(),
+                            }
                             self._log_lst.append(entry)
 
                             await manager.broadcast(json.dumps(s))
@@ -68,7 +75,10 @@ class ProgramLog:
                                 },
                             }
 
-                            entry = {"t": datetime.now().isoformat(), "m": new_data.strip()}
+                            entry = {
+                                "t": datetime.now().isoformat(),
+                                "m": new_data.strip(),
+                            }
                             self._log_lst.append(entry)
 
                             await manager.broadcast(json.dumps(s))

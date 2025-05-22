@@ -10,6 +10,7 @@ from rich.console import Console
 from rich.pretty import install as pretty_install
 from rich.traceback import install as traceback_install
 
+
 log = None
 
 logfile = CONFIG.LOG_PATH

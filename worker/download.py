@@ -1,14 +1,16 @@
-import os
 import asyncio
-from config.load_config import RESOURCE_PATH
-from event_handler import manager
 import json
-from log_manager import log
-from env_manager import envs
-import httpx
+import os
 import sys
 from uuid import uuid4
+
+import httpx
+
+from config.load_config import RESOURCE_PATH
+from env_manager import envs
+from event_handler import manager
 from history_manager import downloadHistory
+from log_manager import log
 
 PYTHON = sys.executable
 

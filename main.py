@@ -1,19 +1,19 @@
+import asyncio
+import json
 import os
+import threading
 
 import uvicorn
-import json
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from event_handler import manager
-from worker.program_logs import programLog
-from worker.check_process import programStatus
-import threading
-import asyncio
 
 import config.load_config as CONFIG
+from event_handler import manager
 from mainapi import router
+from worker.check_process import programStatus
+from worker.program_logs import programLog
 
 app = FastAPI(docs_url=None, redoc_url=None)
 

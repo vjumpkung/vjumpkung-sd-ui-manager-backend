@@ -2,7 +2,6 @@ import asyncio
 import json
 from enum import Enum
 
-from config.load_config import PROGRAM_LOG, UI_TYPE
 from event_handler import manager
 
 

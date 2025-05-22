@@ -1,6 +1,7 @@
-import gdown
-import os
 import argparse
+import os
+
+import gdown
 
 
 def main(path: str, url: str):

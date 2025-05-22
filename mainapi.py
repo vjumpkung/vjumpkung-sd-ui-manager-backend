@@ -1,22 +1,21 @@
-from fastapi import APIRouter, HTTPException, Body, BackgroundTasks, Request, Response
-from fastapi.responses import JSONResponse
-import torch
-import aiofiles
-import json
-from pydantic import BaseModel, HttpUrl
-from typing import Literal
-from typing import List
-import time
-from worker.program_logs import programLog
-from random import randint
-from event_handler import manager
-from env_manager import envs
-from config.load_config import RUNPOD_POD_ID, UI_TYPE
-from worker.download import download_async, download_multiple
 import asyncio
+import json
+from typing import List, Literal
 from uuid import uuid4
+
+import aiofiles
+import torch
+from fastapi import APIRouter, BackgroundTasks, Body, HTTPException, Request
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, HttpUrl
+
+from config.load_config import RUNPOD_POD_ID, UI_TYPE
+from env_manager import envs
+from event_handler import manager
 from history_manager import downloadHistory
 from worker.check_process import programStatus
+from worker.download import download_async, download_multiple
+from worker.program_logs import programLog
 
 
 class ModelDownloadRequest(BaseModel):

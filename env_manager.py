@@ -1,5 +1,6 @@
 import os
 
+
 class Envs:
     def __init__(self):
         self.CIVITAI_TOKEN = ""
@@ -10,5 +11,6 @@ class Envs:
             self.CIVITAI_TOKEN = os.environ["CIVITAI_TOKEN"]
         if "HUGGINGFACE_TOKEN" in os.environ.keys() and self.HUGGINGFACE_TOKEN == "":
             self.HUGGINGFACE_TOKEN = os.environ["HUGGINGFACE_TOKEN"]
+
 
 envs = Envs()
