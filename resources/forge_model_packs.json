@@ -1,0 +1,30 @@
+[
+    {
+        "name": "Stable Diffusion 1.5",
+        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/sd15_list.json"
+    },
+    {
+        "name": "SDXL (Juggernaut)",
+        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/sdxl_list.json"
+    },
+    {
+        "name": "Pony",
+        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/pony.json"
+    },
+    {
+        "name": "IllustriousXL v0.1",
+        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/IL_list.json"
+    },
+    {
+        "name": "Flux.1 Dev (FP8)",
+        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux_fp8_list.json"
+    },
+    {
+        "name": "AI Angel Flux",
+        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/AI_ANGEL_FLUX.json"
+    },
+    {
+        "name": "Controlnet V1.1 (For SD1.5)",
+        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/controlnet_sd15_list.json"
+    }
+]

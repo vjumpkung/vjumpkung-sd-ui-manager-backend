@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import httpx
 
-from config.load_config import RESOURCE_PATH
+from config.load_config import RESOURCE_PATH, UI_TYPE
 from env_manager import envs
 from event_handler import manager
 from history_manager import downloadHistory
@@ -162,6 +162,10 @@ async def download_multiple(packs):
 
         dl_lst = []
         for i in r.json():
+
+            if (UI_TYPE == "INVOKEAI") and (i["type"] in ["text_encoders", "clip", "vae"]):
+                continue
+
             id = str(uuid4())
             dl_lst.append(download_async(id, i["name"], str(i["url"]), i["type"]))
             inqueue = {

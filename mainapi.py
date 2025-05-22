@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import aiofiles
 import torch
-from fastapi import APIRouter, BackgroundTasks, Body, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, HttpUrl
 
@@ -22,14 +22,21 @@ class ModelDownloadRequest(BaseModel):
     url: HttpUrl
     model_type: Literal[
         "checkpoints",
+        "clip",
         "clip_vision",
         "controlnet",
         "diffusion_models",
         "embeddings",
+        "esrgan",
+        "gfpgan",
+        "gligen",
+        "hypernetwork",
         "hypernetworks",
         "ipadapter",
         "loras",
+        "text-encoder",
         "text_encoders",
+        "unet",
         "upscale_models",
         "vae",
     ]
@@ -50,7 +57,7 @@ async def checkcuda():
         return JSONResponse(
             {
                 "cuda": is_cuda_available,
-                "gpu_name": None,
+                "gpu_name": "",
                 "pytorch_version": torch.__version__,
                 "runpod_id": RUNPOD_POD_ID,
                 "status": "NOT_RUNNING",
@@ -78,7 +85,10 @@ async def getDownloadHistory():
 
 @router.get("/get_model_packs")
 async def getModelPacks():
-    async with aiofiles.open("model_packs.json") as fp:
+
+    target = f"./resources/{UI_TYPE.lower()}_model_packs.json"
+
+    async with aiofiles.open(target) as fp:
         model_packs = json.loads(await fp.read())
 
     return JSONResponse(model_packs)
