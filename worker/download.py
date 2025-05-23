@@ -64,11 +64,13 @@ async def download_async(id: str, name: str, url: str, t: str) -> bool:
             "--console-log-level=error",
             "-c",
             "-x",
-            "16",
+            "1",
             "-s",
-            "16",
+            "1",
             "-k",
             "1M",
+            "--retry-wait=5",  # Wait 5 seconds between retries
+            "--max-tries=3",  # Reduce retry attempts
             url,
             f"--dir={destination}",
             "--download-result=hide",
