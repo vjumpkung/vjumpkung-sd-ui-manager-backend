@@ -16,6 +16,9 @@ class DownloadHistory:
     def get(self):
         return self._download_list
 
+    def is_exists(self, id):
+        return id in self._download_list.keys()
+
     def get_by_id(self, id):
         return self._download_list[id]
 

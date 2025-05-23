@@ -188,14 +188,19 @@ async def download_multiple(packs):
             if (UI_TYPE == "INVOKEAI") and (
                 i["type"] in ["text_encoders", "clip", "vae"]
             ):
+                log.warning(f"download {i["name"]} skip because InvokeAI does not support")
                 continue
 
-            if i["name"] in histories_by_name:
+            id = hex(hash(str(i["url"])))
+
+            exists = downloadHistory.is_exists(id)
+
+            if exists:
+                log.warning(f"download {id} skip because it exists")
                 continue
 
             histories_by_name.append(i["name"])
 
-            id = str(uuid4())
             dl_lst.append(download_async(id, i["name"], str(i["url"]), i["type"]))
             inqueue = {
                 "type": "download",

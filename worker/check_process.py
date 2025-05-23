@@ -11,7 +11,7 @@ class Status(Enum):
 
 
 class UIPort(Enum):
-    INVOKEAI = 3001
+    INVOKEAI = 9090 # localhost is 9090 but reverse proxy to 3001
     FORGE = 7860
     COMFY = 8188
 

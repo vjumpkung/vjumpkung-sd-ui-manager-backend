@@ -4,7 +4,6 @@ import os
 import tempfile
 from pathlib import Path
 from typing import List, Literal
-from uuid import uuid4
 
 import aiofiles
 import torch
@@ -132,7 +131,15 @@ async def download_custom_model(
     request: ModelDownloadRequest, background_tasks: BackgroundTasks
 ):
     try:
-        id = str(uuid4())
+        id = hex(hash(str(request.url)))
+
+        exists = downloadHistory.is_exists(id)
+
+        if exists:
+            return {
+                "status": "duplicated",
+                "message": "Download request received but skip",
+            }
 
         res = {
             "type": "download",
