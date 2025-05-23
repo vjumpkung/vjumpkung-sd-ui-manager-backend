@@ -20,14 +20,14 @@ semaphore = asyncio.Semaphore(5)
 async def download_async(id: str, name: str, url: str, t: str) -> bool:
 
     async with semaphore:
-
+        type_name = t
         start = {
             "type": "download",
             "data": {
                 "id": id,
                 "name": name,
                 "url": str(url),
-                "model_type": t,
+                "model_type": type_name,
                 "status": "DOWNLOADING",
             },
         }
@@ -40,6 +40,7 @@ async def download_async(id: str, name: str, url: str, t: str) -> bool:
             envs.get_enviroment_variable()
 
         # adjust 'checkpoints' to 'ckpts' if needed
+
         if t == "checkpoints":
             t = "ckpts"
 
@@ -136,7 +137,7 @@ async def download_async(id: str, name: str, url: str, t: str) -> bool:
                 "id": id,
                 "name": name,
                 "url": str(url),
-                "model_type": t,
+                "model_type": type_name,
                 "status": "COMPLETED",
             },
         }
