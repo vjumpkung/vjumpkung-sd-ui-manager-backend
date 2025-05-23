@@ -108,13 +108,7 @@ venv.bak/
 .idea/*
 
 # image
-/public/*.png
-/public/*.jpg
-/public/*.jpeg
-/public/*.gif
-/public/*.svg
-/public/*.ico
-/public/*.webp
+/public/*.zip
 
 database.db
 
@@ -130,3 +124,6 @@ lora_project/*
 
 program.log
 imageai.log
+
+/output_images/
+/output_images/*

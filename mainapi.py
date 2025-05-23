@@ -1,20 +1,24 @@
 import asyncio
 import json
+import os
+import tempfile
+from pathlib import Path
 from typing import List, Literal
 from uuid import uuid4
 
 import aiofiles
 import torch
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, HttpUrl
 
-from config.load_config import RUNPOD_POD_ID, UI_TYPE
+from config.load_config import RUNPOD_POD_ID, UI_TYPE, OUTPUT_PATH
 from env_manager import envs
 from event_handler import manager
 from history_manager import downloadHistory
 from worker.check_process import programStatus
 from worker.download import download_async, download_multiple
+from worker.export_zip import _create_zip_file
 from worker.program_logs import programLog
 
 
@@ -164,3 +168,57 @@ async def download_custom_model(
 @router.get("/logs")
 def get_program_log():
     return programLog.get()
+
+
+@router.get("/download-images")
+async def download_images_zip():
+    """
+    Creates a zip file of all images in ./output_images folder (recursive)
+    and returns it as a file download using aiofiles for non-blocking I/O.
+    """
+    output_dir = Path(OUTPUT_PATH)
+
+    # Check if the directory exists (using async path operations)
+    if not await asyncio.to_thread(output_dir.exists) or not await asyncio.to_thread(
+        output_dir.is_dir
+    ):
+        raise HTTPException(status_code=404, detail="Output images directory not found")
+
+    # Create a temporary file for the zip
+    temp_zip = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
+    temp_zip_path = temp_zip.name
+    temp_zip.close()
+
+    try:
+        # Create zip file asynchronously
+        await _create_zip_file(output_dir, temp_zip_path)
+
+        # Check if zip file was created and has content (non-blocking)
+        file_exists = await asyncio.to_thread(os.path.exists, temp_zip_path)
+        file_size = (
+            await asyncio.to_thread(os.path.getsize, temp_zip_path)
+            if file_exists
+            else 0
+        )
+
+        if not file_exists or file_size == 0:
+            raise HTTPException(status_code=404, detail="No files found to zip")
+
+        # Return the zip file as a download
+        return FileResponse(
+            path=temp_zip_path,
+            filename="output.zip",
+            media_type="application/zip",
+            background=None,  # File will be deleted after response
+        )
+
+    except Exception as e:
+        # Clean up temp file if something goes wrong (non-blocking)
+        try:
+            if await asyncio.to_thread(os.path.exists, temp_zip_path):
+                await asyncio.to_thread(os.unlink, temp_zip_path)
+        except:
+            pass  # Ignore cleanup errors
+        raise HTTPException(
+            status_code=500, detail=f"Error creating zip file: {str(e)}"
+        )
