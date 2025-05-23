@@ -16,6 +16,18 @@ PYTHON = sys.executable
 
 semaphore = asyncio.Semaphore(5)
 
+forge_types_mapping = {
+    "checkpoints": "ckpts",
+    "vae": "vae",
+    "text-encoder": "text-encoder",
+    "upscale_models": "esrgan",
+    "unet": "ckpts",
+    "clip": "text-encoder",
+    "embeddings": "embeddings",
+    "controlnet": "controlnet",
+    "hypernetworks": "hypernetwork",
+}
+
 
 async def download_async(id: str, name: str, url: str, t: str) -> bool:
 
@@ -41,8 +53,11 @@ async def download_async(id: str, name: str, url: str, t: str) -> bool:
 
         # adjust 'checkpoints' to 'ckpts' if needed
 
-        if t == "checkpoints":
+        if t == "checkpoints" and UI_TYPE != "FORGE":
             t = "ckpts"
+        elif UI_TYPE == "FORGE":
+            if t in forge_types_mapping.keys():
+                t = forge_types_mapping[t]
 
         destination = os.path.join(RESOURCE_PATH, t)
         os.makedirs(destination, exist_ok=True)
