@@ -152,7 +152,12 @@ async def download_async(id: str, name: str, url: str, t: str) -> bool:
             return False
 
 
+histories_by_name = []
+
+
 async def download_multiple(packs):
+    dl_lst = []
+
     for j in packs:
 
         log.info(f"Start download {j['name']}")
@@ -160,11 +165,17 @@ async def download_multiple(packs):
         async with httpx.AsyncClient() as client:
             r = await client.get(str(j["url"]), follow_redirects=True)
 
-        dl_lst = []
         for i in r.json():
 
-            if (UI_TYPE == "INVOKEAI") and (i["type"] in ["text_encoders", "clip", "vae"]):
+            if (UI_TYPE == "INVOKEAI") and (
+                i["type"] in ["text_encoders", "clip", "vae"]
+            ):
                 continue
+
+            if i["name"] in histories_by_name:
+                continue
+
+            histories_by_name.append(i["name"])
 
             id = str(uuid4())
             dl_lst.append(download_async(id, i["name"], str(i["url"]), i["type"]))
@@ -183,4 +194,4 @@ async def download_multiple(packs):
 
             await manager.broadcast(json.dumps(inqueue))
 
-        await asyncio.gather(*dl_lst)
+    await asyncio.gather(*dl_lst)
