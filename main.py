@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 import config.load_config as CONFIG
 from event_handler import manager
-from mainapi import router
+from api import router
 from worker.check_process import programStatus
 from worker.program_logs import programLog
 

@@ -28,6 +28,14 @@
         "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux_fp8_list.json"
     },
     {
+        "name": "AI Angel Flux fp8 (VRAM 24 GB)",
+        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/AI_ANGEL_FLUX.json"
+    },
+    {
+        "name": "Chroma (Unlocked Flux aka. Pony Flux Version) (VRAM 24 GB)",
+        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/chroma.json"
+    },
+    {
         "name": "HiDream-I1 Full fp8 (required VRAM 40GB++)",
         "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hidream-full.json"
     },
@@ -42,10 +50,6 @@
     {
         "name": "HiDream-E1 bf16 (required VRAM 40GB (fp8) 80GB (bf16))",
         "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hidream-e1_full.json"
-    },
-    {
-        "name": "AI Angel Flux fp8 (VRAM 24 GB)",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/AI_ANGEL_FLUX.json"
     },
     {
         "name": "Controlnet V1.1 (For SD1.5)",

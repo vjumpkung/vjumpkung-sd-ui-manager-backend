@@ -188,7 +188,9 @@ async def download_multiple(packs):
             if (UI_TYPE == "INVOKEAI") and (
                 i["type"] in ["text_encoders", "clip", "vae"]
             ):
-                log.warning(f"download {i["name"]} skip because InvokeAI does not support")
+                log.warning(
+                    f"download {i['name']} skip because InvokeAI does not support"
+                )
                 continue
 
             id = hex(hash(str(i["url"])))
