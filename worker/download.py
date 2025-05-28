@@ -2,7 +2,6 @@ import asyncio
 import json
 import os
 import sys
-from uuid import uuid4
 
 import httpx
 
@@ -170,9 +169,6 @@ async def download_async(id: str, name: str, url: str, t: str) -> bool:
             return False
 
 
-histories_by_name = []
-
-
 async def download_multiple(packs):
     dl_lst = []
 
@@ -200,8 +196,6 @@ async def download_multiple(packs):
             if exists:
                 log.warning(f"download {id} skip because it exists")
                 continue
-
-            histories_by_name.append(i["name"])
 
             dl_lst.append(download_async(id, i["name"], str(i["url"]), i["type"]))
             inqueue = {
