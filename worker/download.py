@@ -80,9 +80,9 @@ async def download_async(id: str, name: str, url: str, t: str) -> bool:
             "--console-log-level=error",
             "-c",
             "-x",
-            "1",
+            "8",
             "-s",
-            "1",
+            "8",
             "-k",
             "1M",
             "--retry-wait=5",  # Wait 5 seconds between retries
