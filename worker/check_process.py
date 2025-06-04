@@ -36,25 +36,33 @@ class ProgramStatus:
         return self.MAP_STATUS[self.status]
 
     async def ping_check(self, host="127.0.0.1", port=UIPort.COMFY):
+        
+        temp = Status.NOT_RUNNING
+        
         while True:
             try:
                 reader, writer = await asyncio.open_connection(host, port)
                 writer.close()
                 await writer.wait_closed()
 
-                self.status = Status.RUNNING
+                temp = Status.RUNNING
 
             except (ConnectionRefusedError, OSError):
-                self.status = Status.NOT_RUNNING
+                temp = Status.NOT_RUNNING
 
-            send = {
-                "type": "monitor",
-                "data": {
-                    "status": self.MAP_STATUS[self.status],
-                },
-            }
+            if temp != self.status:
+                
+                self.status = temp
+                
+                send = {
+                    "type": "monitor",
+                    "data": {
+                        "status": self.MAP_STATUS[self.status],
+                    },
+                }
 
-            await manager.broadcast(json.dumps(send))
+                await manager.broadcast(json.dumps(send))
+                
             await asyncio.sleep(5)
 
 
