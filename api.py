@@ -19,6 +19,7 @@ from worker.check_process import programStatus
 from worker.download import download_async, download_multiple
 from worker.export_zip import _create_zip_file
 from worker.program_logs import programLog
+from worker.restart_program import restart_program
 
 
 class ModelDownloadRequest(BaseModel):
@@ -176,6 +177,9 @@ async def download_custom_model(
 def get_program_log():
     return programLog.get()
 
+@router.post("/restart", status_code=204)
+async def restart():
+    await restart_program()
 
 @router.get("/download-images")
 async def download_images_zip():
