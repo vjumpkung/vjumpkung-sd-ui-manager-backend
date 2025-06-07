@@ -1,8 +1,15 @@
 import asyncio
 from log_manager import log
+from config.load_config import UI_TYPE
+
+path_mapping = {
+    "COMFY": "/notebooks",
+    "FORGE": "/notebooks",
+    "INVOKEAI": "/invokeai"
+}
 
 async def restart_program():
-    cmd_stop = ["/bin/bash","/notebooks/stop_process.sh"]
+    cmd_stop = ["/bin/bash",f"{path_mapping[UI_TYPE]}/stop_process.sh"]
     
     proc_stop = await asyncio.create_subprocess_exec(
             *cmd_stop,
@@ -22,7 +29,7 @@ async def restart_program():
         proc_stop.kill()
         await proc_stop.wait()
         
-    cmd_start = ["/bin/bash","/notebooks/start_process.sh"]
+    cmd_start = ["/bin/bash",f"{path_mapping[UI_TYPE]}/start_process.sh"]
      
     proc_start = await asyncio.create_subprocess_exec(
             *cmd_start,
