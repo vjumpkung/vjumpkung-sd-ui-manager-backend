@@ -15,7 +15,7 @@ async def restart_program():
         assert proc_stop.stdout is not None
         async for raw_line in proc_stop.stdout:
             line = raw_line.decode("utf-8").strip("\n")
-            log.debug(line, flush=True)
+            log.debug(line)
 
     except asyncio.CancelledError:
         # if someone cancels the task, kill the subprocess
@@ -35,7 +35,7 @@ async def restart_program():
         assert proc_start.stdout is not None
         async for raw_line in proc_start.stdout:
             line = raw_line.decode("utf-8").strip("\n")
-            log.debug(line, flush=True)
+            log.debug(line)
 
     except asyncio.CancelledError:
         # if someone cancels the task, kill the subprocess
