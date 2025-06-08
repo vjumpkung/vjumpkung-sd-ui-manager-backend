@@ -32,12 +32,13 @@ async def download_async(id: str, name: str, url: str, t: str) -> bool:
 
     async with semaphore:
         type_name = t
+        original_url = str(url)
         start = {
             "type": "download",
             "data": {
                 "id": id,
                 "name": name,
-                "url": str(url),
+                "url": original_url,
                 "model_type": type_name,
                 "status": "DOWNLOADING",
             },
@@ -150,7 +151,7 @@ async def download_async(id: str, name: str, url: str, t: str) -> bool:
             "data": {
                 "id": id,
                 "name": name,
-                "url": str(url),
+                "url": original_url,
                 "model_type": type_name,
                 "status": "COMPLETED",
             },
@@ -189,7 +190,7 @@ async def download_multiple(packs):
                 )
                 continue
 
-            id = hex(hash(str(i["url"])))
+            id = hex(abs(hash(str(i["url"]))))
 
             exists = downloadHistory.is_exists(id)
 

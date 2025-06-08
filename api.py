@@ -51,6 +51,31 @@ class DownloadSelectedDto(BaseModel):
     url: HttpUrl
 
 
+class ImportModel(BaseModel):
+    name: str
+    url: HttpUrl
+    type: Literal[
+        "checkpoints",
+        "clip",
+        "clip_vision",
+        "controlnet",
+        "diffusion_models",
+        "embeddings",
+        "esrgan",
+        "gfpgan",
+        "gligen",
+        "hypernetwork",
+        "hypernetworks",
+        "ipadapter",
+        "loras",
+        "text-encoder",
+        "text_encoders",
+        "unet",
+        "upscale_models",
+        "vae",
+    ]
+
+
 router = APIRouter(prefix="/api")
 
 
@@ -127,12 +152,41 @@ async def download_selected(
         )
 
 
+@router.post("/import_models")
+async def import_models(request: List[ImportModel], background_tasks: BackgroundTasks):
+    try:
+        for t in request:
+            id = hex(abs(hash(str(t.url))))
+            task = asyncio.create_task(download_async(id, t.name, str(t.url), t.type))
+            res = {
+                "type": "download",
+                "data": {
+                    "id": id,
+                    "name": t.name,
+                    "url": str(t.url),
+                    "model_type": t.type,
+                    "status": "IN_QUEUE",
+                },
+            }
+            await manager.broadcast(json.dumps(res))
+            downloadHistory.put(res["data"])
+            background_tasks.add_task(lambda: task)
+        return {
+            "status": "received",
+            "message": "Import Models request received.",
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Error processing request: {str(e)}"
+        )
+
+
 @router.post("/download_custom_model")
 async def download_custom_model(
     request: ModelDownloadRequest, background_tasks: BackgroundTasks
 ):
     try:
-        id = hex(hash(str(request.url)))
+        id = hex(abs(hash(str(request.url))))
 
         exists = downloadHistory.is_exists(id)
 
@@ -177,9 +231,11 @@ async def download_custom_model(
 def get_program_log():
     return programLog.get()
 
+
 @router.post("/restart", status_code=204)
 async def restart():
     await restart_program()
+
 
 @router.get("/download-images")
 async def download_images_zip():
