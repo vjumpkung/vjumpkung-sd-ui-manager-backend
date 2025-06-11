@@ -28,7 +28,13 @@ forge_types_mapping = {
 }
 
 
-async def download_async(id: str, name: str, url: str, t: str) -> bool:
+def check_file_extensions(f: str):
+    return f.split(".")[-1]
+
+
+async def download_async(
+    id: str, name: str, url: str, t: str, from_model_pack=False
+) -> bool:
 
     async with semaphore:
         type_name = t
@@ -98,6 +104,23 @@ async def download_async(id: str, name: str, url: str, t: str) -> bool:
 
         if "huggingface" in url:
             filename = url.split("/")[-1]
+
+            get_extension = check_file_extensions(filename)
+
+            if "diffusion_pytorch_model" in filename:
+                splited_filename = filename.split(".")
+                splited_filename[0] = f"{splited_filename[0]}-{id}"
+
+                filename = ".".join(splited_filename)
+
+            if name != t and (not from_model_pack):
+                if get_extension in name:
+                    splited_filename = filename.split(".")
+                    splited_filename[0] = name.split(f".{get_extension}")[0]
+                    filename = ".".join(splited_filename)
+                else:
+                    filename = f"{name}.{get_extension}"
+
             aria2_cmd.extend(["-o", filename])
 
         # if civitai, let aria2c use content-disposition
@@ -129,7 +152,6 @@ async def download_async(id: str, name: str, url: str, t: str) -> bool:
             stderr=asyncio.subprocess.STDOUT,
         )
 
-        prev_line = ""
         try:
             # read lines as they come in
             assert proc.stdout is not None
@@ -190,15 +212,43 @@ async def download_multiple(packs):
                 )
                 continue
 
-            id = hex(abs(hash(str(i["url"]))))
+            id = hex(abs(hash(str(i["url"]))))[2:]
 
             exists = downloadHistory.is_exists(id)
 
             if exists:
-                log.warning(f"download {id} skip because it exists")
+
+                get_data = downloadHistory.get_by_id(id)
+
+                if get_data["status"] == "FAILED":
+                    dl_lst.append(
+                        download_async(id, i["name"], str(i["url"]), i["type"], True)
+                    )
+
+                    retry_msg = {
+                        "type": "download",
+                        "data": {
+                            "id": id,
+                            "name": i["name"],
+                            "url": str(i["url"]),
+                            "model_type": i["type"],
+                            "status": "RETRYING",
+                        },
+                    }
+
+                    await manager.broadcast(json.dumps(retry_msg))
+                    downloadHistory.update_status(id, "RETRYING...")
+                    log.info(
+                        f"retry downloading {i['name']} from {str(i['url'])}  again..."
+                    )
+                    continue
+
+                log.warning(
+                    f"download {id} was skipped because it exists in download history"
+                )
                 continue
 
-            dl_lst.append(download_async(id, i["name"], str(i["url"]), i["type"]))
+            dl_lst.append(download_async(id, i["name"], str(i["url"]), i["type"], True))
             inqueue = {
                 "type": "download",
                 "data": {

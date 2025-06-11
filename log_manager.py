@@ -29,24 +29,27 @@ def setup_logging(clean=False, debug=False):
     except:
         pass
 
-    if sys.version_info >= (3, 9):
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format="%(asctime)s | %(levelname)s | %(pathname)s | %(message)s",
-            filename=logfile,
-            filemode="a",
-            encoding="utf-8",
-            force=True,
-        )
-    else:
-        logging.basicConfig(
-            level=logging.DEBUG,
-            format="%(asctime)s | %(levelname)s | %(pathname)s | %(message)s",
-            filename=logfile,
-            filemode="a",
-            force=True,
-        )
+    # Create logger
+    log = logging.getLogger("sd")
+    log.setLevel(logging.DEBUG)
 
+    # Clear any existing handlers
+    log.handlers.clear()
+
+    # File handler
+    if sys.version_info >= (3, 9):
+        file_handler = logging.FileHandler(logfile, mode="a", encoding="utf-8")
+    else:
+        file_handler = logging.FileHandler(logfile, mode="a")
+
+    file_handler.setLevel(logging.DEBUG)
+    file_formatter = logging.Formatter(
+        "%(asctime)s | %(levelname)s | %(pathname)s | %(message)s"
+    )
+    file_handler.setFormatter(file_formatter)
+    log.addHandler(file_handler)
+
+    # Console setup for Rich
     console = Console(
         log_time=True,
         log_time_format="%H:%M:%S-%f",
@@ -67,6 +70,8 @@ def setup_logging(clean=False, debug=False):
         indent_guides=False,
         suppress=[],
     )
+
+    # Rich console handler for stdout
     rh = RichHandler(
         show_time=True,
         omit_repeated_times=False,
@@ -79,7 +84,6 @@ def setup_logging(clean=False, debug=False):
         console=console,
     )
     rh.set_name(logging.DEBUG if debug else logging.INFO)
-    log = logging.getLogger("sd")
     log.addHandler(rh)
 
     return log

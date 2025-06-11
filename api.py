@@ -3,7 +3,7 @@ import json
 import os
 import tempfile
 from pathlib import Path
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 import aiofiles
 import torch
@@ -11,7 +11,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, HttpUrl
 
-from config.load_config import RUNPOD_POD_ID, UI_TYPE, OUTPUT_PATH
+from config.load_config import OUTPUT_PATH, RUNPOD_POD_ID, UI_TYPE
 from env_manager import envs
 from event_handler import manager
 from history_manager import downloadHistory
@@ -23,6 +23,7 @@ from worker.restart_program import restart_program
 
 
 class ModelDownloadRequest(BaseModel):
+    name: Optional[str]
     url: HttpUrl
     model_type: Literal[
         "checkpoints",
@@ -158,7 +159,7 @@ async def download_selected(
 async def import_models(request: List[ImportModel], background_tasks: BackgroundTasks):
     try:
         for t in request:
-            id = hex(abs(hash(str(t.url))))
+            id = hex(abs(hash(str(t.url))))[2:]
             task = asyncio.create_task(download_async(id, t.name, str(t.url), t.type))
             res = {
                 "type": "download",
@@ -188,11 +189,46 @@ async def download_custom_model(
     request: ModelDownloadRequest, background_tasks: BackgroundTasks
 ):
     try:
-        id = hex(abs(hash(str(request.url))))
+
+        model_name = (
+            request.model_type
+            if (request.name == "") or (request.name == None)
+            else request.name
+        )
+
+        id = hex(abs(hash(str(request.url))))[2:]
 
         exists = downloadHistory.is_exists(id)
 
         if exists:
+
+            get_data = downloadHistory.get_by_id(id)
+
+            if get_data["status"] == "FAILED":
+                downloadHistory.update_status(id, "RETRYING...")
+
+                res = {
+                    "type": "download",
+                    "data": {
+                        "id": id,
+                        "name": model_name,
+                        "url": str(request.url),
+                        "model_type": request.model_type,
+                        "status": "RETRYING",
+                    },
+                }
+
+                task = asyncio.create_task(
+                    download_async(id, model_name, str(request.url), request.model_type)
+                )
+                background_tasks.add_task(lambda: task)  # schedule it after response
+
+                await manager.broadcast(json.dumps(res))
+                return {
+                    "status": "retrying...",
+                    "message": "Download request received but skip",
+                }
+
             return {
                 "status": "duplicated",
                 "message": "Download request received but skip",
@@ -202,7 +238,7 @@ async def download_custom_model(
             "type": "download",
             "data": {
                 "id": id,
-                "name": request.model_type,
+                "name": model_name,
                 "url": str(request.url),
                 "model_type": request.model_type,
                 "status": "IN_QUEUE",
@@ -214,7 +250,7 @@ async def download_custom_model(
         downloadHistory.put(res["data"])
 
         task = asyncio.create_task(
-            download_async(id, request.model_type, str(request.url), request.model_type)
+            download_async(id, model_name, str(request.url), request.model_type)
         )
         background_tasks.add_task(lambda: task)  # schedule it after response
 
