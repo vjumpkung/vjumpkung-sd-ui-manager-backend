@@ -3,7 +3,7 @@ import json
 import os
 from datetime import datetime
 
-from config.load_config import PROGRAM_LOG
+from config.load_config import PROGRAM_LOG, UI_TYPE
 from event_handler import manager
 from worker.create_log_file import touch_files
 
@@ -12,11 +12,19 @@ touch_files()
 
 class ProgramLog:
 
+    log_path = ""
+
     _log_lst = []
 
-    def __init__(self):
+    key = ""
+
+    def __init__(self, PROGRAM_LOG, KEY):
+
+        self.log_path = PROGRAM_LOG
+        self.key = KEY
+
         self._log_lst.clear()
-        with open(PROGRAM_LOG, "r", encoding="utf-8") as fp:
+        with open(self.log_path, "r", encoding="utf-8") as fp:
             f = fp.readlines()
             for data in f:
                 entry = {"t": datetime.now().isoformat(), "m": data.strip()}
@@ -27,7 +35,7 @@ class ProgramLog:
 
     async def monitor_log(self):
         # Get initial file size
-        log_file_path = PROGRAM_LOG
+        log_file_path = self.log_path
         file_size = os.path.getsize(log_file_path)
         try:
             stop_var = False
@@ -48,6 +56,7 @@ class ProgramLog:
                             # print(new_data, end="", flush=True)
 
                             s = {
+                                "key": self.key,
                                 "type": "logs",
                                 "data": {
                                     "m": new_data.strip(),
@@ -97,4 +106,4 @@ class ProgramLog:
             return
 
 
-programLog = ProgramLog()
+programLog = ProgramLog(PROGRAM_LOG, UI_TYPE)
