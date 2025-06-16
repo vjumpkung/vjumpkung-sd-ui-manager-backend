@@ -19,3 +19,5 @@ RUNPOD_POD_ID = os.environ.get("RUNPOD_POD_ID") or "xxxxxxxxxxxxxx"
 JUPYTER_LAB_PORT = os.environ.get("JUPYTER_LAB_PORT") or "8888"
 
 OUTPUT_PATH = os.environ.get("OUTPUT_PATH") or "./output_images/"
+
+DEBUG = os.getenv("DEBUG") == "1"

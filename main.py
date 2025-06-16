@@ -71,6 +71,8 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
         manager.disconnect(websocket)
 
 
+disable_logging = CONFIG.DEBUG == False  # or whatever your condition is
+
 if __name__ == "__main__":
     _thread = threading.Thread(
         target=asyncio.run, args=(programLog.monitor_log(),), daemon=True
@@ -94,4 +96,5 @@ if __name__ == "__main__":
         host=CONFIG.HOST,
         proxy_headers=True,
         forwarded_allow_ips="*",
+        log_config=None if disable_logging else uvicorn.config.LOGGING_CONFIG,
     )
