@@ -37,17 +37,14 @@ def setup_logging(clean=False, debug=False):
     log.handlers.clear()
 
     # File handler
-    if sys.version_info >= (3, 9):
-        file_handler = logging.FileHandler(logfile, mode="a", encoding="utf-8")
-    else:
-        file_handler = logging.FileHandler(logfile, mode="a")
+    # file_handler = logging.FileHandler(logfile, mode="a", encoding="utf-8")
 
-    file_handler.setLevel(logging.DEBUG)
-    file_formatter = logging.Formatter(
-        "%(asctime)s | %(levelname)s | %(pathname)s | %(message)s"
-    )
-    file_handler.setFormatter(file_formatter)
-    log.addHandler(file_handler)
+    # file_handler.setLevel(logging.DEBUG)
+    # file_formatter = logging.Formatter(
+    #     "%(asctime)s | %(levelname)s | %(pathname)s | %(message)s"
+    # )
+    # file_handler.setFormatter(file_formatter)
+    # log.addHandler(file_handler)
 
     # Console setup for Rich
     console = Console(
