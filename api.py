@@ -15,6 +15,7 @@ from config.load_config import OUTPUT_PATH, RUNPOD_POD_ID, UI_TYPE
 from env_manager import envs
 from event_handler import manager
 from history_manager import downloadHistory
+from utils.generate_uuid import generate_uuid
 from worker.check_process import programStatus
 from worker.download import download_async, download_multiple
 from worker.export_zip import _create_zip_file
@@ -159,7 +160,41 @@ async def download_selected(
 async def import_models(request: List[ImportModel], background_tasks: BackgroundTasks):
     try:
         for t in request:
-            id = hex(abs(hash(str(t.url))))[2:]
+            id = generate_uuid(str(t.url))
+
+            exists = downloadHistory.is_exists(id)
+
+            if exists:
+                model_name = t.name
+                get_data = downloadHistory.get_by_id(id)
+
+                if get_data["status"] == "FAILED":
+                    downloadHistory.update_status(id, "RETRYING...")
+
+                    res = {
+                        "type": "download",
+                        "data": {
+                            "id": id,
+                            "name": model_name,
+                            "url": str(request.url),
+                            "model_type": request.model_type,
+                            "status": "RETRYING",
+                        },
+                    }
+
+                    task = asyncio.create_task(
+                        download_async(
+                            id, model_name, str(request.url), request.model_type
+                        )
+                    )
+                    background_tasks.add_task(
+                        lambda: task
+                    )  # schedule it after response
+
+                    await manager.broadcast(json.dumps(res))
+
+                continue
+
             task = asyncio.create_task(download_async(id, t.name, str(t.url), t.type))
             res = {
                 "type": "download",
@@ -196,7 +231,7 @@ async def download_custom_model(
             else request.name
         )
 
-        id = hex(abs(hash(str(request.url))))[2:]
+        id = generate_uuid(str(request.url))
 
         exists = downloadHistory.is_exists(id)
 

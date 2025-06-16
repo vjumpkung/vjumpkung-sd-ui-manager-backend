@@ -10,6 +10,7 @@ from env_manager import envs
 from event_handler import manager
 from history_manager import downloadHistory
 from log_manager import log
+from utils.generate_uuid import generate_uuid
 
 PYTHON = sys.executable
 
@@ -212,7 +213,7 @@ async def download_multiple(packs):
                 )
                 continue
 
-            id = hex(abs(hash(str(i["url"]))))[2:]
+            id = generate_uuid(str(i["url"]))
 
             exists = downloadHistory.is_exists(id)
 
@@ -239,12 +240,12 @@ async def download_multiple(packs):
                     await manager.broadcast(json.dumps(retry_msg))
                     downloadHistory.update_status(id, "RETRYING...")
                     log.info(
-                        f"retry downloading {i['name']} from {str(i['url'])}  again..."
+                        f"retry downloading {i['name']} from {str(i['url'])} again..."
                     )
                     continue
 
                 log.warning(
-                    f"download {id} was skipped because it exists in download history"
+                    f"download {i['name']} was skipped because it exists in download history"
                 )
                 continue
 
