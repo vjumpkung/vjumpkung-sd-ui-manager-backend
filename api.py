@@ -22,31 +22,33 @@ from worker.export_zip import _create_zip_file
 from worker.program_logs import programLog
 from worker.restart_program import restart_program
 
+model_type_list = Literal[
+    "checkpoints",
+    "clip",
+    "clip_vision",
+    "controlnet",
+    "diffusion_models",
+    "embeddings",
+    "esrgan",
+    "gfpgan",
+    "gligen",
+    "hypernetwork",
+    "hypernetworks",
+    "ipadapter",
+    "loras",
+    "style_models",
+    "text-encoder",
+    "text_encoders",
+    "unet",
+    "upscale_models",
+    "vae",
+]
+
 
 class ModelDownloadRequest(BaseModel):
     name: Optional[str]
     url: HttpUrl
-    model_type: Literal[
-        "checkpoints",
-        "clip",
-        "clip_vision",
-        "controlnet",
-        "diffusion_models",
-        "embeddings",
-        "esrgan",
-        "gfpgan",
-        "gligen",
-        "hypernetwork",
-        "hypernetworks",
-        "ipadapter",
-        "loras",
-        "style_models",
-        "text-encoder",
-        "text_encoders",
-        "unet",
-        "upscale_models",
-        "vae",
-    ]
+    model_type: model_type_list
 
 
 class DownloadSelectedDto(BaseModel):
@@ -57,27 +59,7 @@ class DownloadSelectedDto(BaseModel):
 class ImportModel(BaseModel):
     name: str
     url: HttpUrl
-    type: Literal[
-        "checkpoints",
-        "clip",
-        "clip_vision",
-        "controlnet",
-        "diffusion_models",
-        "embeddings",
-        "esrgan",
-        "gfpgan",
-        "gligen",
-        "hypernetwork",
-        "hypernetworks",
-        "ipadapter",
-        "loras",
-        "style_models",
-        "text-encoder",
-        "text_encoders",
-        "unet",
-        "upscale_models",
-        "vae",
-    ]
+    type: model_type_list
 
 
 router = APIRouter(prefix="/api")
