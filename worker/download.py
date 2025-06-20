@@ -2,6 +2,8 @@ import asyncio
 import json
 import os
 import sys
+import urllib.parse as urlparse
+from urllib.parse import urlencode
 
 import httpx
 
@@ -30,7 +32,8 @@ forge_types_mapping = {
 
 
 def check_file_extensions(f: str):
-    return f.split(".")[-1]
+    root, extension = os.path.splitext(f)
+    return extension
 
 
 async def download_async(
@@ -72,14 +75,18 @@ async def download_async(
         log.info(f"model will download into {destination}")
         log.info(f"Starting download: {name}")
 
+        parsed_url = list(urlparse.urlparse(url))
+
         # attach tokens for civitai or huggingface if present
-        if "civitai" in url and getattr(envs, "CIVITAI_TOKEN", ""):
-            token_str = (
-                f"&token={envs.CIVITAI_TOKEN}"
-                if "?" in url
-                else f"?token={envs.CIVITAI_TOKEN}"
-            )
-            url += token_str
+        if parsed_url[1] == "civitai.com" and getattr(envs, "CIVITAI_TOKEN", ""):
+
+            url_parts = list(urlparse.urlparse(url))
+            query = dict(urlparse.parse_qsl(url_parts[4]))
+            query.setdefault("token", envs.CIVITAI_TOKEN)
+
+            url_parts[4] = urlencode(query)
+
+            url = urlparse.urlunparse(url_parts)
 
         # build base aria2c command
         aria2_cmd = [
@@ -100,27 +107,28 @@ async def download_async(
         ]
 
         # if huggingface, add Authorization header and set output filename
-        if "huggingface" in url and getattr(envs, "HUGGINGFACE_TOKEN", ""):
+        if parsed_url[1] == "huggingface.com" and getattr(
+            envs, "HUGGINGFACE_TOKEN", ""
+        ):
             aria2_cmd.append(f"--header=Authorization: Bearer {envs.HUGGINGFACE_TOKEN}")
 
-        if "huggingface" in url:
+        if parsed_url[1] == "huggingface.com":
             filename = url.split("/")[-1]
 
-            get_extension = check_file_extensions(filename)
+            url_filename = url.split("/")[-1]
 
-            if "diffusion_pytorch_model" in filename:
-                splited_filename = filename.split(".")
-                splited_filename[0] = f"{splited_filename[0]}-{id}"
+            get_extension = check_file_extensions(url_filename)
 
-                filename = ".".join(splited_filename)
+            if ("diffusion_pytorch_model" in url_filename) and (name == t):
+                root, extension = os.path.splitext(url_filename)
+                filename = f"{root}-{id}{extension}"
 
-            if name != t and (not from_model_pack):
+            if (name != t) and (not from_model_pack):
                 if get_extension in name:
-                    splited_filename = filename.split(".")
-                    splited_filename[0] = name.split(f".{get_extension}")[0]
-                    filename = ".".join(splited_filename)
+                    root, extension = os.path.splitext(name)
+                    filename = f"{root}{extension}"
                 else:
-                    filename = f"{name}.{get_extension}"
+                    filename = f"{name}{get_extension}"
 
             aria2_cmd.extend(["-o", filename])
 
@@ -129,8 +137,7 @@ async def download_async(
             aria2_cmd.append("--content-disposition=true")
 
         # if it's a Google Drive link, delegate to your google_drive_download script
-        is_gdrive = "drive.google.com" in url
-        if is_gdrive:
+        if parsed_url[1] == "drive.google.com":
             # note: here we switch to calling a separate Python script
             gd_cmd = [
                 PYTHON,
@@ -147,11 +154,27 @@ async def download_async(
         log.info(f"executing command: {cmd}")
 
         # create subprocess, redirecting stdout/stderr
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-        )
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+            )
+        except Exception as e:
+            res = {
+                "type": "download",
+                "data": {
+                    "id": id,
+                    "name": name,
+                    "url": original_url,
+                    "model_type": type_name,
+                    "status": "FAILED",
+                },
+            }
+            downloadHistory.update_status(id, "FAILED")
+            await manager.broadcast(json.dumps(res))
+            log.error(f"Download failed: {name} (exit code {e})")
+            return False
 
         try:
             # read lines as they come in

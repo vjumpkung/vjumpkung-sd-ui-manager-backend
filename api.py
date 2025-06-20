@@ -191,10 +191,12 @@ async def import_models(request: List[ImportModel], background_tasks: Background
             await manager.broadcast(json.dumps(res))
             downloadHistory.put(res["data"])
             background_tasks.add_task(lambda: task)
+
         return {
             "status": "received",
             "message": "Import Models request received.",
         }
+
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Error processing request: {str(e)}"

@@ -7,7 +7,7 @@ from config.load_config import PROGRAM_LOG, UI_TYPE
 from event_handler import manager
 from worker.create_log_file import touch_files
 
-touch_files()
+
 
 
 class ProgramLog:
@@ -19,7 +19,9 @@ class ProgramLog:
     key = ""
 
     def __init__(self, PROGRAM_LOG, KEY):
-
+        
+        touch_files()
+        
         self.log_path = PROGRAM_LOG
         self.key = KEY
 
@@ -29,6 +31,8 @@ class ProgramLog:
             for data in f:
                 entry = {"t": datetime.now().isoformat(), "m": data.strip()}
                 self._log_lst.append(entry)
+                if len(self._log_lst) > 500:
+                    self._log_lst.pop(0)
 
     def get(self):
         return self._log_lst
@@ -89,6 +93,9 @@ class ProgramLog:
                                 "m": new_data.strip(),
                             }
                             self._log_lst.append(entry)
+
+                            if len(self._log_lst) > 500:
+                                self._log_lst.pop(0)
 
                             await manager.broadcast(json.dumps(s))
                             file_size = current_size
