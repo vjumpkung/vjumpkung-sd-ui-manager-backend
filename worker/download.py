@@ -107,12 +107,10 @@ async def download_async(
         ]
 
         # if huggingface, add Authorization header and set output filename
-        if parsed_url[1] == "huggingface.com" and getattr(
-            envs, "HUGGINGFACE_TOKEN", ""
-        ):
+        if parsed_url[1] == "huggingface.co" and getattr(envs, "HUGGINGFACE_TOKEN", ""):
             aria2_cmd.append(f"--header=Authorization: Bearer {envs.HUGGINGFACE_TOKEN}")
 
-        if parsed_url[1] == "huggingface.com":
+        if parsed_url[1] == "huggingface.co":
             filename = url.split("/")[-1]
 
             url_filename = url.split("/")[-1]
