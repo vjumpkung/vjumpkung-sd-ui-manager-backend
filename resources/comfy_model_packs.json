@@ -4,6 +4,10 @@
         "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/sd15_list.json"
     },
     {
+        "name": "Controlnet V1.1 (For SD1.5)",
+        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/controlnet_sd15_list.json"
+    },
+    {
         "name": "SDXL (Juggernaut) (VRAM 8 GB)",
         "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/sdxl_list.json"
     },
@@ -52,10 +56,6 @@
         "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hidream-e1_full.json"
     },
     {
-        "name": "Controlnet V1.1 (For SD1.5)",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/controlnet_sd15_list.json"
-    },
-    {
         "name": "Hunyuan T2V fp16 (VRAM 24 GB use load fp8_e4m3fn)",
         "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hunyuan_video_text_to_video_fp16.json"
     },
@@ -90,5 +90,11 @@
     {
         "name": "WAN2.1 VACE 14B fp16 Kijai (VRAM 24 GB use load fp8_e4m3fn)",
         "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_vace_14B_fp16_kijai.json"
+    },{
+        "name": "Flux.1 Kontext Dev (fp8) (VRAM 24 GB)",
+        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux_kontext_dev.json"
+    },{
+        "name": "Omnigen 2 (VRAM 24 GB)",
+        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/omnigen_2.json"
     }
 ]
