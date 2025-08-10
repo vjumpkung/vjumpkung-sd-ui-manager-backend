@@ -2,13 +2,14 @@ import asyncio
 import json
 import os
 import tempfile
+import time
 from pathlib import Path
 from typing import List, Literal, Optional
 
 import aiofiles
 import torch
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, HttpUrl
 
 from config.load_config import OUTPUT_PATH, RUNPOD_POD_ID, UI_TYPE
@@ -298,10 +299,9 @@ async def restart():
 async def download_images_zip():
     """
     Creates a zip file of all images in ./output_images folder (recursive)
-    and returns it as a file download using aiofiles for non-blocking I/O.
+    and returns it as a streaming download with Content-Disposition header.
     """
     output_dir = Path(OUTPUT_PATH)
-
     # Check if the directory exists (using async path operations)
     if not await asyncio.to_thread(output_dir.exists) or not await asyncio.to_thread(
         output_dir.is_dir
@@ -328,12 +328,28 @@ async def download_images_zip():
         if not file_exists or file_size == 0:
             raise HTTPException(status_code=404, detail="No files found to zip")
 
-        # Return the zip file as a download
-        return FileResponse(
-            path=temp_zip_path,
-            filename="output.zip",
+        # Define async generator to stream file content
+        async def file_streamer():
+            try:
+                async with aiofiles.open(temp_zip_path, "rb") as file:
+                    while chunk := await file.read(8192):  # 8KB chunks
+                        yield chunk
+            finally:
+                # Clean up temp file after streaming
+                try:
+                    if await asyncio.to_thread(os.path.exists, temp_zip_path):
+                        await asyncio.to_thread(os.unlink, temp_zip_path)
+                except:
+                    pass  # Ignore cleanup errors
+
+        # Return streaming response with Content-Disposition header
+        return StreamingResponse(
+            file_streamer(),
             media_type="application/zip",
-            background=None,  # File will be deleted after response
+            headers={
+                "Content-Disposition": f"attachment; filename=output_images_{int(time.time())}.zip",
+                "Content-Length": str(file_size),
+            },
         )
 
     except Exception as e:
