@@ -110,5 +110,9 @@
     {
         "name": "WAN2.2 I2V 14B fp8 (VRAM 48 GB)",
         "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan22_14B_i2v.json"
+    },
+    {
+        "name": "QWEN Image fp8 (VRAM 24 GB usable)",
+        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_fp8.json"
     }
 ]
