@@ -160,13 +160,13 @@ async def import_models(request: List[ImportModel], background_tasks: Background
                             "id": id,
                             "name": model_name,
                             "url": str(t.url),
-                            "model_type": t.model_type,
+                            "model_type": t.type,
                             "status": "RETRYING",
                         },
                     }
 
                     task = asyncio.create_task(
-                        download_async(id, model_name, str(t.url), t.model_type)
+                        download_async(id, model_name, str(t.url), t.type)
                     )
                     background_tasks.add_task(
                         lambda: task
