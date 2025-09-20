@@ -43,6 +43,7 @@ model_type_list = Literal[
     "unet",
     "upscale_models",
     "vae",
+    "model_patches",
 ]
 
 
