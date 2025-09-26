@@ -120,6 +120,10 @@
         "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_edit_fp8.json"
     },
     {
+        "name": "QWEN Image Edit 2509 fp8 (VRAM 24 GB)",
+        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_edit_2509_fp8.json"
+    },
+    {
         "name": "Flux.1 Krea Dev fp8 (VRAM 24 GB)",
         "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux_krea.json"
     }
