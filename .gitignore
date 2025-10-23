@@ -127,3 +127,5 @@ imageai.log
 
 /output_images/
 /output_images/*
+
+.DS_Store
