@@ -23,34 +23,11 @@ from worker.export_zip import _create_zip_file
 from worker.program_logs import programLog
 from worker.restart_program import restart_program
 
-model_type_list = Literal[
-    "checkpoints",
-    "clip",
-    "clip_vision",
-    "controlnet",
-    "diffusion_models",
-    "embeddings",
-    "esrgan",
-    "gfpgan",
-    "gligen",
-    "hypernetwork",
-    "hypernetworks",
-    "ipadapter",
-    "loras",
-    "style_models",
-    "text-encoder",
-    "text_encoders",
-    "unet",
-    "upscale_models",
-    "vae",
-    "model_patches",
-]
-
 
 class ModelDownloadRequest(BaseModel):
     name: Optional[str]
     url: HttpUrl
-    model_type: model_type_list
+    model_type: str
 
 
 class DownloadSelectedDto(BaseModel):
@@ -61,7 +38,7 @@ class DownloadSelectedDto(BaseModel):
 class ImportModel(BaseModel):
     name: str
     url: HttpUrl
-    type: model_type_list
+    type: str
 
 
 router = APIRouter(prefix="/api")
@@ -102,7 +79,6 @@ async def getDownloadHistory():
 
 @router.get("/get_model_packs")
 async def getModelPacks():
-
     target = f"./resources/{UI_TYPE.lower()}_model_packs.json"
 
     async with aiofiles.open(target) as fp:
@@ -208,7 +184,6 @@ async def download_custom_model(
     request: ModelDownloadRequest, background_tasks: BackgroundTasks
 ):
     try:
-
         model_name = (
             request.model_type
             if (request.name == "") or (request.name == None)
@@ -220,7 +195,6 @@ async def download_custom_model(
         exists = downloadHistory.is_exists(id)
 
         if exists:
-
             get_data = downloadHistory.get_by_id(id)
 
             if get_data["status"] == "FAILED":
