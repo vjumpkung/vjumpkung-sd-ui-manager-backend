@@ -1,134 +1,138 @@
 [
-    {
-        "name": "Stable Diffusion 1.5",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/sd15_list.json"
-    },
-    {
-        "name": "Controlnet V1.1 (For SD1.5)",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/controlnet_sd15_list.json"
-    },
-    {
-        "name": "SDXL (Juggernaut)",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/sdxl_list.json"
-    },
-    {
-        "name": "ipadapter",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ipadapter_list.json"
-    },
-    {
-        "name": "Pony",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/pony.json"
-    },
-    {
-        "name": "IllustriousXL v0.1",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/IL_list.json"
-    },
-    {
-        "name": "NoobAI",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/noobai_list.json"
-    },
-    {
-        "name": "Flux.1 Dev fp8",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux_fp8_list.json"
-    },
-    {
-        "name": "Flux.1 Krea Dev fp8",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux_krea.json"
-    },
-    {
-        "name": "AI Angel Flux fp8",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/AI_ANGEL_FLUX.json"
-    },
-    {
-        "name": "Chroma (Unlocked Flux aka. Pony Flux Version)",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/chroma.json"
-    },
-    {
-        "name": "HiDream-I1 Full fp8",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hidream-full.json"
-    },
-    {
-        "name": "HiDream-I1 Dev fp8",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hidream-dev.json"
-    },
-    {
-        "name": "HiDream-I1 Fast fp8",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hidream-fast.json"
-    },
-    {
-        "name": "HiDream-E1 bf16",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hidream-e1_full.json"
-    },
-    {
-        "name": "Hunyuan T2V fp16",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hunyuan_video_text_to_video_fp16.json"
-    },
-    {
-        "name": "Hunyuan I2V fp16",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hunyuan_video_image_to_video_720p_bf16.json"
-    },
-    {
-        "name": "WAN2.1 1.3B T2V 480p fp16",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_t2v_1.3B_fp16.json"
-    },
-    {
-        "name": "WAN2.1 14B T2V 480p fp16",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_t2v_14B_fp16.json"
-    },
-    {
-        "name": "WAN2.1 I2V 480p fp16",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_i2v_480p_14B_fp16.json"
-    },
-    {
-        "name": "WAN2.1 I2V 720p fp16",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_i2v_720p_14B_fp16.json"
-    },
-    {
-        "name": "WAN2.1 VACE 1.3B fp16 (VRAM 16 GB)",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_vace_1.3B_fp16.json"
-    },
-    {
-        "name": "WAN2.1 VACE 14B fp16",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_vace_14B_fp16.json"
-    },
-    {
-        "name": "WAN2.1 VACE 14B fp16 Kijai ",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_vace_14B_fp16_kijai.json"
-    },
-    {
-        "name": "Flux.1 Kontext Dev fp8",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux_kontext_dev.json"
-    },
-    {
-        "name": "Omnigen 2",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/omnigen_2.json"
-    },
-    {
-        "name": "WAN2.2 TI2V 5B fp16",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan22_5B_ti2v.json"
-    },
-    {
-        "name": "WAN2.2 T2V 14B fp8",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan22_14B_t2v.json"
-    },
-    {
-        "name": "WAN2.2 I2V 14B fp8",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan22_14B_i2v.json"
-    },
-    {
-        "name": "WAN2.1 InfiniteTalk fp8",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/infinite_talk_kj.json"
-    },
-    {
-        "name": "QWEN Image fp8",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_fp8.json"
-    },
-    {
-        "name": "QWEN Image Edit fp8",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_edit_fp8.json"
-    },
-    {
-        "name": "QWEN Image Edit 2509 fp8",
-        "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_edit_2509_fp8.json"
-    }
+  {
+    "name": "Stable Diffusion 1.5",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/sd15_list.json"
+  },
+  {
+    "name": "Controlnet V1.1 (For SD1.5)",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/controlnet_sd15_list.json"
+  },
+  {
+    "name": "SDXL (Juggernaut)",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/sdxl_list.json"
+  },
+  {
+    "name": "ipadapter",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ipadapter_list.json"
+  },
+  {
+    "name": "Pony",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/pony.json"
+  },
+  {
+    "name": "IllustriousXL v0.1",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/IL_list.json"
+  },
+  {
+    "name": "NoobAI",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/noobai_list.json"
+  },
+  {
+    "name": "Flux.1 Dev fp8",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux_fp8_list.json"
+  },
+  {
+    "name": "Flux.1 Krea Dev fp8",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux_krea.json"
+  },
+  {
+    "name": "AI Angel Flux fp8",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/AI_ANGEL_FLUX.json"
+  },
+  {
+    "name": "Chroma (Unlocked Flux aka. Pony Flux Version)",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/chroma.json"
+  },
+  {
+    "name": "HiDream-I1 Full fp8",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hidream-full.json"
+  },
+  {
+    "name": "HiDream-I1 Dev fp8",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hidream-dev.json"
+  },
+  {
+    "name": "HiDream-I1 Fast fp8",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hidream-fast.json"
+  },
+  {
+    "name": "HiDream-E1 bf16",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hidream-e1_full.json"
+  },
+  {
+    "name": "Hunyuan T2V fp16",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hunyuan_video_text_to_video_fp16.json"
+  },
+  {
+    "name": "Hunyuan I2V fp16",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hunyuan_video_image_to_video_720p_bf16.json"
+  },
+  {
+    "name": "WAN2.1 1.3B T2V 480p fp16",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_t2v_1.3B_fp16.json"
+  },
+  {
+    "name": "WAN2.1 14B T2V 480p fp16",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_t2v_14B_fp16.json"
+  },
+  {
+    "name": "WAN2.1 I2V 480p fp16",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_i2v_480p_14B_fp16.json"
+  },
+  {
+    "name": "WAN2.1 I2V 720p fp16",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_i2v_720p_14B_fp16.json"
+  },
+  {
+    "name": "WAN2.1 VACE 1.3B fp16 (VRAM 16 GB)",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_vace_1.3B_fp16.json"
+  },
+  {
+    "name": "WAN2.1 VACE 14B fp16",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_vace_14B_fp16.json"
+  },
+  {
+    "name": "WAN2.1 VACE 14B fp16 Kijai ",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_vace_14B_fp16_kijai.json"
+  },
+  {
+    "name": "Flux.1 Kontext Dev fp8",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux_kontext_dev.json"
+  },
+  {
+    "name": "Omnigen 2",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/omnigen_2.json"
+  },
+  {
+    "name": "WAN2.2 TI2V 5B fp16",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan22_5B_ti2v.json"
+  },
+  {
+    "name": "WAN2.2 T2V 14B fp8",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan22_14B_t2v.json"
+  },
+  {
+    "name": "WAN2.2 I2V 14B fp8",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan22_14B_i2v.json"
+  },
+  {
+    "name": "WAN2.1 InfiniteTalk fp8",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/infinite_talk_kj.json"
+  },
+  {
+    "name": "QWEN Image fp8",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_fp8.json"
+  },
+  {
+    "name": "QWEN Image Edit fp8",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_edit_fp8.json"
+  },
+  {
+    "name": "QWEN Image Edit 2509 fp8",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_edit_2509_fp8.json"
+  },
+  {
+    "name": "Flux.2 Dev fp8",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux_2_dev.json"
+  }
 ]
