@@ -134,5 +134,9 @@
   {
     "name": "Flux.2 Dev fp8",
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux_2_dev.json"
+  },
+  {
+    "name": "Z-Turbo",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/z_turbo.json"
   }
 ]
