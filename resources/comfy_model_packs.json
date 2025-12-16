@@ -142,5 +142,9 @@
   {
     "name": "SteadyDancer Kijai",
     "url": "https://gist.githubusercontent.com/vjumpkung/6fc43c6a2192e2c182862e7caa3150e9/raw/662cc8f4dc32fd9b0580e742bdb67bcfa3de49fd/wan-steadydancer-kijai.json"
+  },
+  {
+    "name": "SCAIL",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/scail.json"
   }
 ]
