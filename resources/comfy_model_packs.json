@@ -92,7 +92,7 @@
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_vace_14B_fp16.json"
   },
   {
-    "name": "WAN2.1 VACE 14B fp16 Kijai ",
+    "name": "WAN2.1 VACE 14B fp16 Kijai",
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_vace_14B_fp16_kijai.json"
   },
   {
@@ -136,15 +136,31 @@
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux_2_dev.json"
   },
   {
-    "name": "Z-Turbo",
+    "name": "Z-Image Turbo",
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/z_turbo.json"
   },
   {
-    "name": "SteadyDancer Kijai",
+    "name": "SteadyDancer",
     "url": "https://gist.githubusercontent.com/vjumpkung/6fc43c6a2192e2c182862e7caa3150e9/raw/662cc8f4dc32fd9b0580e742bdb67bcfa3de49fd/wan-steadydancer-kijai.json"
   },
   {
     "name": "SCAIL",
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/scail.json"
+  },
+  {
+    "name": "Longcat",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/longcat.json"
+  },
+  {
+    "name": "Longcat Avatar",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/longcat_avatar.json"
+  },
+  {
+    "name": "QWEN Image Edit 2511",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_edit_2511.json"
+  },
+  {
+    "name": "QWEN Image Layered",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_layered.json"
   }
 ]
