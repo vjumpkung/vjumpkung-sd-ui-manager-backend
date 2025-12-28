@@ -79,6 +79,9 @@ async def getDownloadHistory():
 
 @router.get("/get_model_packs")
 async def getModelPacks():
+    if UI_TYPE == "ZIMAGE":
+        return JSONResponse([])
+
     target = f"./resources/{UI_TYPE.lower()}_model_packs.json"
 
     async with aiofiles.open(target) as fp:
