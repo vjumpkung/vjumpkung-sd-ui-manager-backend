@@ -52,7 +52,7 @@ async def checkcuda():
                 "gpu_name": "skipped",
                 "pytorch_version": "skipped",
                 "runpod_id": RUNPOD_POD_ID,
-                "status": "NOT_RUNNING",
+                "status": programStatus.get_status(),
                 "ui": UI_TYPE,
             }
         )
