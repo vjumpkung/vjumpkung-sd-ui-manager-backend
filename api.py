@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import List, Literal, Optional
 
 import aiofiles
-import torch
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, HttpUrl
@@ -46,6 +45,33 @@ router = APIRouter(prefix="/api")
 
 @router.get("/checkcuda")
 async def checkcuda():
+    if UI_TYPE == "ZIMAGE":
+        return JSONResponse(
+            {
+                "cuda": "skipped",
+                "gpu_name": "skipped",
+                "pytorch_version": "skipped",
+                "runpod_id": RUNPOD_POD_ID,
+                "status": "NOT_RUNNING",
+                "ui": UI_TYPE,
+            }
+        )
+    try:
+        import torch
+    except ImportError:
+        return JSONResponse(
+            {
+                "cuda": "import failed",
+                "gpu_name": "import failed",
+                "pytorch_version": "import failed",
+                "runpod_id": RUNPOD_POD_ID,
+                "status": "NOT_RUNNING",
+                "ui": UI_TYPE,
+            }
+        )
+
+    print("import torch completed")
+
     is_cuda_available = torch.cuda.is_available()
     if not is_cuda_available:
         return JSONResponse(
