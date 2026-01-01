@@ -116,20 +116,8 @@
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan22_14B_i2v.json"
   },
   {
-    "name": "WAN2.1 InfiniteTalk fp8",
+    "name": "InfiniteTalk fp8",
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/infinite_talk_kj.json"
-  },
-  {
-    "name": "QWEN Image fp8",
-    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_fp8.json"
-  },
-  {
-    "name": "QWEN Image Edit fp8",
-    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_edit_fp8.json"
-  },
-  {
-    "name": "QWEN Image Edit 2509 fp8",
-    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_edit_2509_fp8.json"
   },
   {
     "name": "Flux.2 Dev fp8",
@@ -148,19 +136,39 @@
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/scail.json"
   },
   {
-    "name": "Longcat",
+    "name": "Longcat fp8",
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/longcat.json"
   },
   {
-    "name": "Longcat Avatar",
+    "name": "Longcat Avatar fp8",
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/longcat_avatar.json"
   },
   {
-    "name": "QWEN Image Edit 2511",
+    "name": "FlashVSR",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flash_vsr.json"
+  },
+  {
+    "name": "QWEN Image fp8",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_fp8.json"
+  },
+  {
+    "name": "QWEN Image Edit fp8",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_edit_fp8.json"
+  },
+  {
+    "name": "QWEN Image Edit 2509 fp8",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_edit_2509_fp8.json"
+  },
+  {
+    "name": "QWEN Image Edit 2511 fp8",
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_edit_2511.json"
   },
   {
-    "name": "QWEN Image Layered",
+    "name": "QWEN Image Layered fp8",
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_layered.json"
+  },
+  {
+    "name": "QWEN Image 2512 fp8",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_2512_fp8.json"
   }
 ]
