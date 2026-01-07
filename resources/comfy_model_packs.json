@@ -170,5 +170,25 @@
   {
     "name": "QWEN Image 2512 fp8",
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_2512_fp8.json"
+  },
+  {
+    "name": "LTX2 fp8",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ltx2_fp8.json"
+  },
+  {
+    "name": "LTX2 fp4 (for 50 series)",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ltx2_fp4.json"
+  },
+  {
+    "name": "LTX2 Distilled fp8",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ltx2_distilled_fp8.json"
+  },
+  {
+    "name": "LTX2 Detailer LoRA",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ltx2_detailer_lora.json"
+  },
+  {
+    "name": "LTX2 Control LoRA",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ltx2_control_lora.json"
   }
 ]
