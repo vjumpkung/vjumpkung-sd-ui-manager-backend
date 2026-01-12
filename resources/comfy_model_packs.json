@@ -4,19 +4,11 @@
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/sd15_list.json"
   },
   {
-    "name": "Controlnet V1.1 (For SD1.5)",
-    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/controlnet_sd15_list.json"
-  },
-  {
-    "name": "SDXL (Juggernaut)",
+    "name": "SDXL",
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/sdxl_list.json"
   },
   {
-    "name": "ipadapter",
-    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ipadapter_list.json"
-  },
-  {
-    "name": "Pony",
+    "name": "Pony V6",
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/pony.json"
   },
   {
@@ -40,7 +32,7 @@
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/AI_ANGEL_FLUX.json"
   },
   {
-    "name": "Chroma (Unlocked Flux aka. Pony Flux Version)",
+    "name": "Chroma-1 HD",
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/chroma.json"
   },
   {
@@ -84,7 +76,7 @@
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_i2v_720p_14B_fp16.json"
   },
   {
-    "name": "WAN2.1 VACE 1.3B fp16 (VRAM 16 GB)",
+    "name": "WAN2.1 VACE 1.3B fp16",
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_vace_1.3B_fp16.json"
   },
   {
@@ -176,7 +168,7 @@
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ltx2_fp8.json"
   },
   {
-    "name": "LTX2 fp4 (for 50 series)",
+    "name": "LTX2 nvfp4",
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ltx2_fp4.json"
   },
   {

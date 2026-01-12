@@ -22,6 +22,13 @@ from worker.export_zip import _create_zip_file
 from worker.program_logs import programLog
 from worker.restart_program import restart_program
 
+if UI_TYPE == "ZIMAGE":
+    pass
+else:
+    import torch
+
+    print("import torch completed")
+
 
 class ModelDownloadRequest(BaseModel):
     name: Optional[str]
@@ -56,21 +63,6 @@ async def checkcuda():
                 "ui": UI_TYPE,
             }
         )
-    try:
-        import torch
-    except ImportError:
-        return JSONResponse(
-            {
-                "cuda": "import failed",
-                "gpu_name": "import failed",
-                "pytorch_version": "import failed",
-                "runpod_id": RUNPOD_POD_ID,
-                "status": "NOT_RUNNING",
-                "ui": UI_TYPE,
-            }
-        )
-
-    print("import torch completed")
 
     is_cuda_available = torch.cuda.is_available()
     if not is_cuda_available:
