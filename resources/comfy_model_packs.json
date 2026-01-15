@@ -28,10 +28,6 @@
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux_krea.json"
   },
   {
-    "name": "AI Angel Flux fp8",
-    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/AI_ANGEL_FLUX.json"
-  },
-  {
     "name": "Chroma-1 HD",
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/chroma.json"
   },
@@ -168,7 +164,7 @@
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ltx2_fp8.json"
   },
   {
-    "name": "LTX2 nvfp4",
+    "name": "LTX2 nvfp4 (for 50 series)",
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ltx2_fp4.json"
   },
   {
@@ -182,5 +178,29 @@
   {
     "name": "LTX2 Control LoRA",
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ltx2_control_lora.json"
+  },
+  {
+    "name": "Flux.2 Klein 4B Base",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_4b_base.json"
+  },
+  {
+    "name": "Flux.2 Klein 4B nvfp4 (for 50 series)",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_4b_fp4.json"
+  },
+  {
+    "name": "Flux.2 Klein 4B (distilled 4 steps)",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_4b.json"
+  },
+  {
+    "name": "Flux.2 Klein 9B Base",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_9b_base.json"
+  },
+  {
+    "name": "Flux.2 Klein 9B nvfp4 (for 50 series)",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_9b_fp4.json"
+  },
+  {
+    "name": "Flux.2 Klein 9B (distilled 4 steps)",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_9b.json"
   }
 ]
