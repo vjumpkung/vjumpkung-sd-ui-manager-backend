@@ -168,6 +168,10 @@
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ltx2_fp4.json"
   },
   {
+    "name": "LTX2 fp8 (Kijai Version)",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ltx2_fp8_kj.json"
+  },
+  {
     "name": "LTX2 Distilled fp8",
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ltx2_distilled_fp8.json"
   },
