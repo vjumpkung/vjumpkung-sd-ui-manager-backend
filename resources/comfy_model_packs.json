@@ -112,10 +112,6 @@
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux_2_dev.json"
   },
   {
-    "name": "Z-Image Turbo",
-    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/z_turbo.json"
-  },
-  {
     "name": "SteadyDancer",
     "url": "https://gist.githubusercontent.com/vjumpkung/6fc43c6a2192e2c182862e7caa3150e9/raw/662cc8f4dc32fd9b0580e742bdb67bcfa3de49fd/wan-steadydancer-kijai.json"
   },
@@ -206,5 +202,13 @@
   {
     "name": "Flux.2 Klein 9B (distilled 4 steps)",
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_9b.json"
+  },
+  {
+    "name": "Z-Image Turbo",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/z_turbo.json"
+  },
+  {
+    "name": "Z-Image",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/z_image.json"
   }
 ]
