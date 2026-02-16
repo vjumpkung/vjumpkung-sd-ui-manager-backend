@@ -104,8 +104,12 @@
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan22_14B_i2v.json"
   },
   {
-    "name": "InfiniteTalk fp8",
+    "name": "InfiniteTalk fp8 Kijai",
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/infinite_talk_kj.json"
+  },
+  {
+    "name": "InfiniteTalk fp8",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/infinite_talk_native.json"
   },
   {
     "name": "Flux.2 Dev fp8",
