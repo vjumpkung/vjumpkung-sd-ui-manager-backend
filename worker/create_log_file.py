@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from config.load_config import LOG_PATH, PROGRAM_LOG
 from log_manager import log
 

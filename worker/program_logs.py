@@ -8,10 +8,7 @@ from event_handler import manager
 from worker.create_log_file import touch_files
 
 
-
-
 class ProgramLog:
-
     log_path = ""
 
     _log_lst = []
@@ -19,9 +16,8 @@ class ProgramLog:
     key = ""
 
     def __init__(self, PROGRAM_LOG, KEY):
-        
         touch_files()
-        
+
         self.log_path = PROGRAM_LOG
         self.key = KEY
 

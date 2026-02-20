@@ -1,8 +1,9 @@
 import asyncio
+import hashlib
 import json
 import os
 import tempfile
-import time
+from datetime import datetime
 from pathlib import Path
 from typing import List, Literal, Optional
 
@@ -31,6 +32,8 @@ else:
 
 
 class ModelDownloadRequest(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
     name: Optional[str]
     url: HttpUrl
     model_type: str
@@ -92,7 +95,7 @@ async def checkcuda():
 
 @router.get("/download_history")
 async def getDownloadHistory():
-    return downloadHistory.get()
+    return await downloadHistory.get()
 
 
 @router.get("/get_model_packs")
@@ -143,14 +146,14 @@ async def import_models(request: List[ImportModel], background_tasks: Background
         for t in request:
             id = generate_uuid(str(t.url))
 
-            exists = downloadHistory.is_exists(id)
+            exists = await downloadHistory.is_exists(id)
 
             if exists:
                 model_name = t.name
-                get_data = downloadHistory.get_by_id(id)
+                get_data = await downloadHistory.get_by_id(id)
 
                 if get_data["status"] == "FAILED":
-                    downloadHistory.update_status(id, "RETRYING...")
+                    await downloadHistory.update_status(id, "RETRYING...")
 
                     res = {
                         "type": "download",
@@ -186,7 +189,7 @@ async def import_models(request: List[ImportModel], background_tasks: Background
                 },
             }
             await manager.broadcast(json.dumps(res))
-            downloadHistory.put(res["data"])
+            await downloadHistory.put(res["data"])
             background_tasks.add_task(lambda: task)
 
         return {
@@ -213,13 +216,13 @@ async def download_custom_model(
 
         id = generate_uuid(str(request.url))
 
-        exists = downloadHistory.is_exists(id)
+        exists = await downloadHistory.is_exists(id)
 
         if exists:
-            get_data = downloadHistory.get_by_id(id)
+            get_data = await downloadHistory.get_by_id(id)
 
             if get_data["status"] == "FAILED":
-                downloadHistory.update_status(id, "RETRYING...")
+                await downloadHistory.update_status(id, "RETRYING...")
 
                 res = {
                     "type": "download",
@@ -261,7 +264,7 @@ async def download_custom_model(
 
         await manager.broadcast(json.dumps(res))
 
-        downloadHistory.put(res["data"])
+        await downloadHistory.put(res["data"])
 
         task = asyncio.create_task(
             download_async(id, model_name, str(request.url), request.model_type)
@@ -336,12 +339,19 @@ async def download_images_zip():
                 except:
                     pass  # Ignore cleanup errors
 
+        # Generate filename with YYYY-MM-DD and short hash
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        short_hash = hashlib.sha256(
+            str(datetime.now().timestamp()).encode()
+        ).hexdigest()[:8]
+        filename = f"output_images_{date_str}_{short_hash}.zip"
+
         # Return streaming response with Content-Disposition header
         return StreamingResponse(
             file_streamer(),
             media_type="application/zip",
             headers={
-                "Content-Disposition": f"attachment; filename=output_images_{int(time.time())}.zip",
+                "Content-Disposition": f"attachment; filename={filename}",
                 "Content-Length": str(file_size),
             },
         )

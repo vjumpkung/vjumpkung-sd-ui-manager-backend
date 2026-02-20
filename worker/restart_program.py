@@ -1,6 +1,7 @@
 import asyncio
-from log_manager import log
+
 from config.load_config import UI_TYPE
+from log_manager import log
 
 path_mapping = {"COMFY": "/notebooks", "FORGE": "/notebooks", "INVOKEAI": "/invokeai"}
 

@@ -39,7 +39,6 @@ def check_file_extensions(f: str):
 async def download_async(
     id: str, name: str, url: str, t: str, from_model_pack=False
 ) -> bool:
-
     async with semaphore:
         type_name = t
         original_url = str(url)
@@ -54,7 +53,7 @@ async def download_async(
             },
         }
 
-        downloadHistory.update_status(id, "DOWNLOADING")
+        await downloadHistory.update_status(id, "DOWNLOADING")
 
         await manager.broadcast(json.dumps(start))
 
@@ -79,7 +78,6 @@ async def download_async(
 
         # attach tokens for civitai or huggingface if present
         if parsed_url[1] == "civitai.com" and getattr(envs, "CIVITAI_TOKEN", ""):
-
             url_parts = list(urlparse.urlparse(url))
             query = dict(urlparse.parse_qsl(url_parts[4]))
             query.setdefault("token", envs.CIVITAI_TOKEN)
@@ -169,7 +167,7 @@ async def download_async(
                     "status": "FAILED",
                 },
             }
-            downloadHistory.update_status(id, "FAILED")
+            await downloadHistory.update_status(id, "FAILED")
             await manager.broadcast(json.dumps(res))
             log.error(f"Download failed: {name} (exit code {e})")
             return False
@@ -202,13 +200,13 @@ async def download_async(
         }
 
         if return_code == 0:
-            downloadHistory.update_status(id, "COMPLETED")
+            await downloadHistory.update_status(id, "COMPLETED")
             await manager.broadcast(json.dumps(res))
             log.info(f"Download completed: {name}")
             return True
         else:
             res["data"]["status"] = "FAILED"
-            downloadHistory.update_status(id, "FAILED")
+            await downloadHistory.update_status(id, "FAILED")
             await manager.broadcast(json.dumps(res))
             log.error(f"Download failed: {name} (exit code {return_code})")
             return False
@@ -218,14 +216,12 @@ async def download_multiple(packs):
     dl_lst = []
 
     for j in packs:
-
         log.info(f"Start download {j['name']}")
 
         async with httpx.AsyncClient() as client:
             r = await client.get(str(j["url"]), follow_redirects=True)
 
         for i in r.json():
-
             if (UI_TYPE == "INVOKEAI") and (
                 i["type"] in ["text_encoders", "clip", "vae"]
             ):
@@ -236,11 +232,10 @@ async def download_multiple(packs):
 
             id = generate_uuid(str(i["url"]))
 
-            exists = downloadHistory.is_exists(id)
+            exists = await downloadHistory.is_exists(id)
 
             if exists:
-
-                get_data = downloadHistory.get_by_id(id)
+                get_data = await downloadHistory.get_by_id(id)
 
                 if get_data["status"] == "FAILED":
                     dl_lst.append(
@@ -259,7 +254,7 @@ async def download_multiple(packs):
                     }
 
                     await manager.broadcast(json.dumps(retry_msg))
-                    downloadHistory.update_status(id, "RETRYING...")
+                    await downloadHistory.update_status(id, "RETRYING...")
                     log.info(
                         f"retry downloading {i['name']} from {str(i['url'])} again..."
                     )
@@ -282,7 +277,7 @@ async def download_multiple(packs):
                 },
             }
 
-            downloadHistory.put(inqueue["data"])
+            await downloadHistory.put(inqueue["data"])
 
             await manager.broadcast(json.dumps(inqueue))
 

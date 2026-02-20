@@ -10,8 +10,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 import config.load_config as CONFIG
-from event_handler import manager
 from api import router
+from event_handler import manager
 from worker.check_process import programStatus
 from worker.program_logs import programLog
 

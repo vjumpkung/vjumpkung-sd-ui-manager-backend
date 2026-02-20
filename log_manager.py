@@ -1,15 +1,15 @@
-import os
 import logging
-import time
+import os
 import sys
-import config.load_config as CONFIG
+import time
 
-from rich.theme import Theme
-from rich.logging import RichHandler
 from rich.console import Console
+from rich.logging import RichHandler
 from rich.pretty import install as pretty_install
+from rich.theme import Theme
 from rich.traceback import install as traceback_install
 
+import config.load_config as CONFIG
 
 log = None
 

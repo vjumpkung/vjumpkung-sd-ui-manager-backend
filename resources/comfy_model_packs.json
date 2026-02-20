@@ -214,5 +214,9 @@
   {
     "name": "Z-Image",
     "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/z_image.json"
+  },
+  {
+    "name": "ANIMA",
+    "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/anima.json"
   }
 ]
