@@ -22,7 +22,7 @@ class ProgramLog:
         self.key = KEY
 
         self._log_lst.clear()
-        with open(self.log_path, "r", encoding="utf-8") as fp:
+        with open(self.log_path, "r", encoding="utf-8", errors="replace") as fp:
             f = fp.readlines()
             for data in f:
                 entry = {"t": datetime.now().isoformat(), "m": data.strip()}
@@ -39,7 +39,7 @@ class ProgramLog:
         file_size = os.path.getsize(log_file_path)
         try:
             stop_var = False
-            with open(log_file_path, "r", encoding="utf-8") as f:
+            with open(log_file_path, "r", encoding="utf-8", errors="replace") as f:
                 # Move to the end of the file
                 f.seek(file_size)
 
@@ -55,21 +55,27 @@ class ProgramLog:
                             new_data = f.read()
                             # print(new_data, end="", flush=True)
 
-                            s = {
-                                "key": self.key,
-                                "type": "logs",
-                                "data": {
-                                    "m": new_data.strip(),
-                                },
-                            }
+                            # Split by newlines and broadcast each line separately
+                            lines = new_data.split("\n")
+                            for line in lines:
+                                if line:  # Skip empty lines
+                                    s = {
+                                        "key": self.key,
+                                        "type": "logs",
+                                        "data": {
+                                            "m": line,
+                                        },
+                                    }
 
-                            entry = {
-                                "t": datetime.now().isoformat(),
-                                "m": new_data.strip(),
-                            }
-                            self._log_lst.append(entry)
+                                    entry = {
+                                        "t": datetime.now().isoformat(),
+                                        "m": line,
+                                    }
+                                    self._log_lst.append(entry)
+                                    if len(self._log_lst) > 500:
+                                        self._log_lst.pop(0)
 
-                            await manager.broadcast(json.dumps(s))
+                                    await manager.broadcast(json.dumps(s))
 
                             file_size = current_size
 
@@ -77,23 +83,29 @@ class ProgramLog:
                         elif current_size < file_size:
                             f.seek(0)
                             new_data = f.read()
-                            s = {
-                                "type": "logs",
-                                "data": {
-                                    "m": new_data.strip(),
-                                },
-                            }
 
-                            entry = {
-                                "t": datetime.now().isoformat(),
-                                "m": new_data.strip(),
-                            }
-                            self._log_lst.append(entry)
+                            # Split by newlines and broadcast each line separately
+                            lines = new_data.split("\n")
+                            for line in lines:
+                                if line:  # Skip empty lines
+                                    s = {
+                                        "key": self.key,
+                                        "type": "logs",
+                                        "data": {
+                                            "m": line,
+                                        },
+                                    }
 
-                            if len(self._log_lst) > 500:
-                                self._log_lst.pop(0)
+                                    entry = {
+                                        "t": datetime.now().isoformat(),
+                                        "m": line,
+                                    }
+                                    self._log_lst.append(entry)
 
-                            await manager.broadcast(json.dumps(s))
+                                    if len(self._log_lst) > 500:
+                                        self._log_lst.pop(0)
+
+                                    await manager.broadcast(json.dumps(s))
                             file_size = current_size
 
                         # time.sleep(0.1)
