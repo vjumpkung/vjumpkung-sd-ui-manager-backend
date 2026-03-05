@@ -1,9 +1,11 @@
 {
-  "SD/SDXL": [
+  "Stable Diffusion": [
     {
       "name": "Stable Diffusion 1.5",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/sd15_list.json"
-    },
+    }
+  ],
+  "SDXL": [
     {
       "name": "SDXL",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/sdxl_list.json"
@@ -85,12 +87,16 @@
   ],
   "Hunyuan Video": [
     {
-      "name": "Hunyuan T2V fp16",
+      "name": "Hunyuan Video T2V fp16",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hunyuan_video_text_to_video_fp16.json"
     },
     {
-      "name": "Hunyuan I2V fp16",
+      "name": "Hunyuan Video I2V fp16",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hunyuan_video_image_to_video_720p_bf16.json"
+    },
+    {
+      "name": "Hunyuan Video 1.5",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hy_1_5.json"
     }
   ],
   "WAN Video": [
@@ -181,6 +187,12 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ltx2_control_lora.json"
     }
   ],
+  "LTX2.3": [
+    {
+      "name": "LTX2.3",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ltx2_3.json"
+    }
+  ],
   "QWEN Image": [
     {
       "name": "QWEN Image fp8",
@@ -219,12 +231,16 @@
   ],
   "Others": [
     {
-      "name": "Longcat fp8",
+      "name": "Longcat Video fp8",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/longcat.json"
     },
     {
-      "name": "Longcat Avatar fp8",
+      "name": "Longcat Video Avatar fp8",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/longcat_avatar.json"
+    },
+    {
+      "name": "Longcat Image",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/longcat_image.json"
     },
     {
       "name": "Chroma-1 HD",
@@ -235,7 +251,7 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/omnigen_2.json"
     },
     {
-      "name": "ANIMA",
+      "name": "ANIMA Preview",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/anima.json"
     }
   ]
