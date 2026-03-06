@@ -189,8 +189,12 @@
   ],
   "LTX2.3": [
     {
-      "name": "LTX2.3",
+      "name": "LTX2.3 fp8",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ltx2_3.json"
+    },
+    {
+      "name": "LTX2.3 fp8 (Split Version)",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ltx2_3_kj.json"
     }
   ],
   "QWEN Image": [
