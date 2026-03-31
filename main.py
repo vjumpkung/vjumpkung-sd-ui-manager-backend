@@ -43,6 +43,11 @@ async def favicon():
 # Route all other requests to the NextJS index.html
 @app.get("/{full_path:path}")
 async def serve_nextjs(full_path: str, request: Request):
+    # Skip API and WebSocket paths — let their own routers handle them
+    if full_path.startswith(("api/", "ws/")):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404)
+
     # Try to serve the exact path
     path = f"web/{full_path}"
 

@@ -130,10 +130,12 @@ async def download_selected(
             download_multiple(list(map(lambda x: dict(x), request)))
         )
         background_tasks.add_task(lambda: task)
-        return {
-            "status": "received",
-            "message": "Download request received.",
-        }
+        return JSONResponse(
+            {
+                "status": "received",
+                "message": "Download request received.",
+            }
+        )
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Error processing request: {str(e)}"
@@ -192,10 +194,12 @@ async def import_models(request: List[ImportModel], background_tasks: Background
             await downloadHistory.put(res["data"])
             background_tasks.add_task(lambda: task)
 
-        return {
-            "status": "received",
-            "message": "Import Models request received.",
-        }
+        return JSONResponse(
+            {
+                "status": "received",
+                "message": "Import Models request received.",
+            }
+        )
 
     except Exception as e:
         raise HTTPException(
@@ -241,15 +245,19 @@ async def download_custom_model(
                 background_tasks.add_task(lambda: task)  # schedule it after response
 
                 await manager.broadcast(json.dumps(res))
-                return {
-                    "status": "retrying...",
+                return JSONResponse(
+                    {
+                        "status": "retrying...",
+                        "message": "Download request received but skip",
+                    }
+                )
+
+            return JSONResponse(
+                {
+                    "status": "duplicated",
                     "message": "Download request received but skip",
                 }
-
-            return {
-                "status": "duplicated",
-                "message": "Download request received but skip",
-            }
+            )
 
         res = {
             "type": "download",
@@ -271,10 +279,12 @@ async def download_custom_model(
         )
         background_tasks.add_task(lambda: task)  # schedule it after response
 
-        return {
-            "status": "received",
-            "message": "Download request received.",
-        }
+        return JSONResponse(
+            {
+                "status": "received",
+                "message": "Download request received.",
+            }
+        )
 
     except Exception as e:
         raise HTTPException(

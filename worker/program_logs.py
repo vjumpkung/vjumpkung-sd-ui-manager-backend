@@ -27,8 +27,6 @@ class ProgramLog:
             for data in f:
                 entry = {"t": datetime.now().isoformat(), "m": data.strip()}
                 self._log_lst.append(entry)
-                if len(self._log_lst) > 500:
-                    self._log_lst.pop(0)
 
     def get(self):
         return self._log_lst
@@ -72,8 +70,6 @@ class ProgramLog:
                                         "m": line,
                                     }
                                     self._log_lst.append(entry)
-                                    if len(self._log_lst) > 500:
-                                        self._log_lst.pop(0)
 
                                     await manager.broadcast(json.dumps(s))
 
@@ -101,9 +97,6 @@ class ProgramLog:
                                         "m": line,
                                     }
                                     self._log_lst.append(entry)
-
-                                    if len(self._log_lst) > 500:
-                                        self._log_lst.pop(0)
 
                                     await manager.broadcast(json.dumps(s))
                             file_size = current_size

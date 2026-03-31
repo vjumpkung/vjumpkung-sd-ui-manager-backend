@@ -65,6 +65,10 @@
     {
       "name": "Flux.2 Klein 9B (distilled 4 steps)",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_9b.json"
+    },
+    {
+      "name": "Flux.2 Klein 9B KV",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/main/resource_list/flux_2_klein_9b_kv.json"
     }
   ],
   "HiDream": [
@@ -95,8 +99,12 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hunyuan_video_image_to_video_720p_bf16.json"
     },
     {
-      "name": "Hunyuan Video 1.5",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hy_1_5.json"
+      "name": "Hunyuan Video 1.5 T2V",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/main/resource_list/hy_1_5_t2v.json"
+    },
+    {
+      "name": "Hunyuan Video 1.5 I2V",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/main/resource_list/hy_1_5_i2v.json"
     }
   ],
   "WAN Video": [
@@ -159,6 +167,10 @@
     {
       "name": "WAN2.2 I2V 14B fp8",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan22_14B_i2v.json"
+    },
+    {
+      "name": "WAN2.1 Alpha",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/main/resource_list/wan_2_1_alpha.json"
     }
   ],
   "LTX2": [
@@ -223,6 +235,20 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_2512_fp8.json"
     }
   ],
+  "Kandinsky 5 Lite": [
+    {
+      "name": "Kandinsky 5 Lite T2V",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/main/resource_list/kandinsky5lite_t2v.json"
+    },
+    {
+      "name": "Kandinsky 5 Lite I2V",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/main/resource_list/kandinsky5lite_i2v.json"
+    },
+    {
+      "name": "Kandinsky 5 Lite T2I",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/main/resource_list/kandinsky5lite_t2i.json"
+    }
+  ],
   "Z-Image": [
     {
       "name": "Z-Image Turbo",
@@ -233,7 +259,7 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/z_image.json"
     }
   ],
-  "Others": [
+  "Longcat Video": [
     {
       "name": "Longcat Video fp8",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/longcat.json"
@@ -241,11 +267,19 @@
     {
       "name": "Longcat Video Avatar fp8",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/longcat_avatar.json"
-    },
+    }
+  ],
+  "Longcat Image": [
     {
       "name": "Longcat Image",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/longcat_image.json"
     },
+    {
+      "name": "Longcat Image Edit",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/main/resource_list/longcat_image_edit.json"
+    }
+  ],
+  "Others": [
     {
       "name": "Chroma-1 HD",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/chroma.json"
@@ -257,6 +291,18 @@
     {
       "name": "ANIMA Preview",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/anima.json"
+    },
+    {
+      "name": "Capybara 0.1",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/main/resource_list/capybara_0_1.json"
+    },
+    {
+      "name": "HUMO",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/main/resource_list/humo.json"
+    },
+    {
+      "name": "FireRed Image Edit 1.1",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/main/resource_list/firered_image_edit_1_1.json"
     }
   ]
 }
