@@ -6,7 +6,6 @@ import sys
 import urllib.parse as urlparse
 from urllib.parse import urlencode
 
-import aiofiles
 import httpx
 from curl_cffi.requests import AsyncSession
 
@@ -39,9 +38,6 @@ def check_file_extensions(f: str):
     return extension
 
 
-_CHUNK_SIZE = 1024 * 1024  # 1 MB
-
-
 def _extract_filename_from_cd(cd: str) -> str | None:
     match = re.findall(
         r"filename\*?=(?:UTF-8''|\"?)([^\";\r\n]+)\"?", cd, re.IGNORECASE
@@ -69,7 +65,10 @@ async def _download_http(
         try:
             async with AsyncSession() as session:
                 head = await session.head(
-                    url, impersonate="chrome", headers=request_headers, allow_redirects=True
+                    url,
+                    impersonate="chrome",
+                    headers=request_headers,
+                    allow_redirects=True,
                 )
                 try:
                     if head.status_code < 400:
@@ -86,25 +85,40 @@ async def _download_http(
 
     filepath = os.path.join(destination, filename)
 
-    # Stream the file via httpx — proper chunk-by-chunk, no internal buffering
-    async with httpx.AsyncClient(
-        headers=request_headers, follow_redirects=True, timeout=None
-    ) as client:
-        async with client.stream("GET", url) as resp:
-            resp.raise_for_status()
+    cmd = [
+        "curl",
+        "-L",
+        "--retry",
+        "3",
+        "--retry-delay",
+        "5",
+        "-A",
+        _BROWSER_UA,
+        "-o",
+        filepath,
+    ]
 
-            # resolve filename from GET response if HEAD didn't provide it
-            if filename == url.split("?")[0].split("/")[-1]:
-                cd_name = _extract_filename_from_cd(
-                    resp.headers.get("content-disposition", "")
-                )
-                if cd_name:
-                    filename = cd_name
-                    filepath = os.path.join(destination, filename)
+    for key, value in (headers or {}).items():
+        if key.lower() != "user-agent":
+            cmd.extend(["-H", f"{key}: {value}"])
 
-            async with aiofiles.open(filepath, "wb") as f:
-                async for chunk in resp.aiter_bytes(_CHUNK_SIZE):
-                    await f.write(chunk)
+    cmd.append(url)
+
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
+    )
+
+    assert proc.stdout is not None
+    async for raw_line in proc.stdout:
+        line = raw_line.decode("utf-8").strip()
+        if line:
+            print(line, flush=True)
+
+    return_code = await proc.wait()
+    if return_code != 0:
+        raise RuntimeError(f"curl exited with code {return_code}")
 
     return filename
 
