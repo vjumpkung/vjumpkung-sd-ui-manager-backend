@@ -1,11 +1,15 @@
 import asyncio
 import json
 import os
+import re
 import sys
 import urllib.parse as urlparse
 from urllib.parse import urlencode
 
+import aiofiles
 import httpx
+from curl_cffi.requests import AsyncSession
+from tqdm import tqdm
 
 from config.load_config import RESOURCE_PATH, UI_TYPE
 from env_manager import envs
@@ -34,6 +38,133 @@ forge_types_mapping = {
 def check_file_extensions(f: str):
     root, extension = os.path.splitext(f)
     return extension
+
+
+_PARALLEL_CONNECTIONS = 8
+_CHUNK_SIZE = 1024 * 1024  # 1 MB
+
+
+def _extract_filename_from_cd(cd: str) -> str | None:
+    match = re.findall(
+        r"filename\*?=(?:UTF-8''|\"?)([^\";\r\n]+)\"?", cd, re.IGNORECASE
+    )
+    return match[0].strip().strip('"') if match else None
+
+
+async def _download_http(
+    url: str,
+    destination: str,
+    filename: str | None = None,
+    headers: dict | None = None,
+) -> str:
+    base_headers = headers or {}
+    content_length = 0
+    accepts_ranges = False
+
+    async with AsyncSession() as session:
+        # HEAD to probe range support and resolve filename from Content-Disposition
+        try:
+            head = await session.head(
+                url, impersonate="chrome", headers=base_headers, allow_redirects=True
+            )
+            try:
+                if head.status_code < 400:
+                    content_length = int(head.headers.get("content-length", 0))
+                    accepts_ranges = (
+                        head.headers.get("accept-ranges", "none").lower() == "bytes"
+                    )
+                    if not filename:
+                        filename = _extract_filename_from_cd(
+                            head.headers.get("content-disposition", "")
+                        )
+            finally:
+                await head.aclose()
+        except Exception:
+            pass
+
+        if not filename:
+            filename = url.split("?")[0].split("/")[-1]
+
+        filepath = os.path.join(destination, filename)
+
+        desc = filename[:40] + "…" if len(filename) > 40 else filename
+        pbar = tqdm(
+            total=content_length if content_length > 0 else None,
+            unit="B",
+            unit_scale=True,
+            unit_divisor=1024,
+            desc=desc,
+            dynamic_ncols=True,
+        )
+
+        try:
+            if accepts_ranges and content_length > 0:
+                # parallel chunked download
+                part = content_length // _PARALLEL_CONNECTIONS
+                ranges = [
+                    (
+                        i * part,
+                        (i + 1) * part - 1
+                        if i < _PARALLEL_CONNECTIONS - 1
+                        else content_length - 1,
+                    )
+                    for i in range(_PARALLEL_CONNECTIONS)
+                ]
+
+                # pre-allocate file so concurrent seeks are safe
+                async with aiofiles.open(filepath, "wb") as f:
+                    await f.seek(content_length - 1)
+                    await f.write(b"\x00")
+
+                async def fetch_chunk(start: int, end: int) -> None:
+                    chunk_headers = {**base_headers, "Range": f"bytes={start}-{end}"}
+                    resp = await session.get(
+                        url, stream=True, impersonate="chrome", headers=chunk_headers
+                    )
+                    try:
+                        resp.raise_for_status()
+                        async with aiofiles.open(filepath, "r+b") as f:
+                            await f.seek(start)
+                            async for data in resp.aiter_content(
+                                chunk_size=_CHUNK_SIZE
+                            ):
+                                await f.write(data)
+                                pbar.update(len(data))
+                    finally:
+                        await resp.aclose()
+
+                await asyncio.gather(*[fetch_chunk(s, e) for s, e in ranges])
+
+            else:
+                # fallback: single-stream GET
+                resp = await session.get(
+                    url, stream=True, impersonate="chrome", headers=base_headers
+                )
+                try:
+                    resp.raise_for_status()
+
+                    # try Content-Disposition from response if HEAD didn't give us a filename
+                    if not filename or filename == url.split("?")[0].split("/")[-1]:
+                        cd_name = _extract_filename_from_cd(
+                            resp.headers.get("content-disposition", "")
+                        )
+                        if cd_name:
+                            filename = cd_name
+                            filepath = os.path.join(destination, filename)
+                            pbar.set_description(
+                                filename[:40] + "…" if len(filename) > 40 else filename
+                            )
+
+                    async with aiofiles.open(filepath, "wb") as f:
+                        async for data in resp.aiter_content(chunk_size=_CHUNK_SIZE):
+                            await f.write(data)
+                            pbar.update(len(data))
+                finally:
+                    await resp.aclose()
+        finally:
+            pbar.close()
+
+    return filename
 
 
 async def download_async(
@@ -86,7 +217,64 @@ async def download_async(
 
             url = urlparse.urlunparse(url_parts)
 
-        # build base aria2c command
+        # CivitAI / HuggingFace: use curl_cffi
+        if parsed_url[1] in ("civitai.com", "huggingface.co"):
+            hf_filename = None
+            hf_headers = {}
+
+            if parsed_url[1] == "huggingface.co":
+                if getattr(envs, "HUGGINGFACE_TOKEN", ""):
+                    hf_headers["Authorization"] = f"Bearer {envs.HUGGINGFACE_TOKEN}"
+
+                url_filename = url.split("/")[-1]
+                get_extension = check_file_extensions(url_filename)
+                hf_filename = url_filename
+
+                if ("diffusion_pytorch_model" in url_filename) and (name == t):
+                    root, extension = os.path.splitext(url_filename)
+                    hf_filename = f"{root}-{id}{extension}"
+                elif (name != t) and (not from_model_pack):
+                    if get_extension in name:
+                        root, extension = os.path.splitext(name)
+                        hf_filename = f"{root}{extension}"
+                    else:
+                        hf_filename = f"{name}{get_extension}"
+
+            try:
+                await _download_http(
+                    url, destination, filename=hf_filename, headers=hf_headers
+                )
+                await downloadHistory.update_status(id, "COMPLETED")
+                res = {
+                    "type": "download",
+                    "data": {
+                        "id": id,
+                        "name": name,
+                        "url": original_url,
+                        "model_type": type_name,
+                        "status": "COMPLETED",
+                    },
+                }
+                await manager.broadcast(json.dumps(res))
+                log.info(f"Download completed: {name}")
+                return True
+            except Exception as e:
+                res = {
+                    "type": "download",
+                    "data": {
+                        "id": id,
+                        "name": name,
+                        "url": original_url,
+                        "model_type": type_name,
+                        "status": "FAILED",
+                    },
+                }
+                await downloadHistory.update_status(id, "FAILED")
+                await manager.broadcast(json.dumps(res))
+                log.error(f"Download failed: {name} ({e})")
+                return False
+
+        # build base aria2c command (Google Drive falls through to subprocess below)
         aria2_cmd = [
             "aria2c",
             "--console-log-level=error",
@@ -97,40 +285,12 @@ async def download_async(
             "8",
             "-k",
             "1M",
-            "--retry-wait=5",  # Wait 5 seconds between retries
-            "--max-tries=3",  # Reduce retry attempts
+            "--retry-wait=5",
+            "--max-tries=3",
             url,
             f"--dir={destination}",
             "--download-result=hide",
         ]
-
-        # if huggingface, add Authorization header and set output filename
-        if parsed_url[1] == "huggingface.co" and getattr(envs, "HUGGINGFACE_TOKEN", ""):
-            aria2_cmd.append(f"--header=Authorization: Bearer {envs.HUGGINGFACE_TOKEN}")
-
-        if parsed_url[1] == "huggingface.co":
-            filename = url.split("/")[-1]
-
-            url_filename = url.split("/")[-1]
-
-            get_extension = check_file_extensions(url_filename)
-
-            if ("diffusion_pytorch_model" in url_filename) and (name == t):
-                root, extension = os.path.splitext(url_filename)
-                filename = f"{root}-{id}{extension}"
-
-            if (name != t) and (not from_model_pack):
-                if get_extension in name:
-                    root, extension = os.path.splitext(name)
-                    filename = f"{root}{extension}"
-                else:
-                    filename = f"{name}{get_extension}"
-
-            aria2_cmd.extend(["-o", filename])
-
-        # if civitai, let aria2c use content-disposition
-        if "civitai" in url:
-            aria2_cmd.append("--content-disposition=true")
 
         # if it's a Google Drive link, delegate to your google_drive_download script
         if parsed_url[1] == "drive.google.com":

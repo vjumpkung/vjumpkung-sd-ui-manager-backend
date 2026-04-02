@@ -4,7 +4,7 @@ import os
 import threading
 
 import uvicorn
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -45,7 +45,6 @@ async def favicon():
 async def serve_nextjs(full_path: str, request: Request):
     # Skip API and WebSocket paths — let their own routers handle them
     if full_path.startswith(("api/", "ws/")):
-        from fastapi import HTTPException
         raise HTTPException(status_code=404)
 
     # Try to serve the exact path
