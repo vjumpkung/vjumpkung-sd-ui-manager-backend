@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import re
+import shutil
 import sys
 import urllib.parse as urlparse
 from urllib.parse import urlencode
@@ -60,28 +61,38 @@ async def _download_http(
 ) -> str:
     request_headers = {"User-Agent": _BROWSER_UA, **(headers or {})}
 
-    # HEAD via curl_cffi to resolve filename (handles Cloudflare on the probe)
-    if not filename:
-        try:
-            async with AsyncSession() as session:
-                head = await session.head(
-                    url,
-                    impersonate="chrome",
-                    headers=request_headers,
-                    allow_redirects=True,
-                )
-                try:
-                    if head.status_code < 400:
+    # HEAD via curl_cffi to resolve filename and file size (handles Cloudflare on the probe)
+    content_length = 0
+    try:
+        async with AsyncSession() as session:
+            head = await session.head(
+                url,
+                impersonate="chrome",
+                headers=request_headers,
+                allow_redirects=True,
+            )
+            try:
+                if head.status_code < 400:
+                    content_length = int(head.headers.get("content-length", 0))
+                    if not filename:
                         filename = _extract_filename_from_cd(
                             head.headers.get("content-disposition", "")
                         )
-                finally:
-                    await head.aclose()
-        except Exception:
-            pass
+            finally:
+                await head.aclose()
+    except Exception:
+        pass
 
     if not filename:
         filename = url.split("?")[0].split("/")[-1]
+
+    if content_length > 0:
+        free = shutil.disk_usage(destination).free
+        if free < content_length:
+            raise RuntimeError(
+                f"Not enough disk space: need {content_length / 1024**3:.2f} GB, "
+                f"free {free / 1024**3:.2f} GB"
+            )
 
     filepath = os.path.join(destination, filename)
 
