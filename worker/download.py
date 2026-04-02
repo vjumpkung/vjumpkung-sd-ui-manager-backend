@@ -49,43 +49,52 @@ def _extract_filename_from_cd(cd: str) -> str | None:
     return match[0].strip().strip('"') if match else None
 
 
+_BROWSER_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36"
+)
+
+
 async def _download_http(
     url: str,
     destination: str,
     filename: str | None = None,
     headers: dict | None = None,
 ) -> str:
-    base_headers = headers or {}
+    request_headers = {"User-Agent": _BROWSER_UA, **(headers or {})}
 
-    async with AsyncSession() as session:
-        # HEAD to resolve filename from Content-Disposition
+    # HEAD via curl_cffi to resolve filename (handles Cloudflare on the probe)
+    if not filename:
         try:
-            head = await session.head(
-                url, impersonate="chrome", headers=base_headers, allow_redirects=True
-            )
-            try:
-                if head.status_code < 400 and not filename:
-                    filename = _extract_filename_from_cd(
-                        head.headers.get("content-disposition", "")
-                    )
-            finally:
-                await head.aclose()
+            async with AsyncSession() as session:
+                head = await session.head(
+                    url, impersonate="chrome", headers=request_headers, allow_redirects=True
+                )
+                try:
+                    if head.status_code < 400:
+                        filename = _extract_filename_from_cd(
+                            head.headers.get("content-disposition", "")
+                        )
+                finally:
+                    await head.aclose()
         except Exception:
             pass
 
-        if not filename:
-            filename = url.split("?")[0].split("/")[-1]
+    if not filename:
+        filename = url.split("?")[0].split("/")[-1]
 
-        filepath = os.path.join(destination, filename)
+    filepath = os.path.join(destination, filename)
 
-        resp = await session.get(
-            url, stream=True, impersonate="chrome", headers=base_headers
-        )
-        try:
+    # Stream the file via httpx — proper chunk-by-chunk, no internal buffering
+    async with httpx.AsyncClient(
+        headers=request_headers, follow_redirects=True, timeout=None
+    ) as client:
+        async with client.stream("GET", url) as resp:
             resp.raise_for_status()
 
-            # try Content-Disposition from response if HEAD didn't give us a filename
-            if not filename or filename == url.split("?")[0].split("/")[-1]:
+            # resolve filename from GET response if HEAD didn't provide it
+            if filename == url.split("?")[0].split("/")[-1]:
                 cd_name = _extract_filename_from_cd(
                     resp.headers.get("content-disposition", "")
                 )
@@ -94,10 +103,8 @@ async def _download_http(
                     filepath = os.path.join(destination, filename)
 
             async with aiofiles.open(filepath, "wb") as f:
-                async for data in resp.aiter_content(chunk_size=_CHUNK_SIZE):
-                    await f.write(data)
-        finally:
-            await resp.aclose()
+                async for chunk in resp.aiter_bytes(_CHUNK_SIZE):
+                    await f.write(chunk)
 
     return filename
 
