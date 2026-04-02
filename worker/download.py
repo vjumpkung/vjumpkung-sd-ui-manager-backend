@@ -125,7 +125,7 @@ async def _download_http(
     async for raw_line in proc.stdout:
         line = raw_line.decode("utf-8").strip()
         if line:
-            print(line, flush=True)
+            log.info(line)
 
     return_code = await proc.wait()
     if return_code != 0:
