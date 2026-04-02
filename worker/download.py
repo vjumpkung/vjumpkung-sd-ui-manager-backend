@@ -9,7 +9,6 @@ from urllib.parse import urlencode
 import aiofiles
 import httpx
 from curl_cffi.requests import AsyncSession
-from tqdm import tqdm
 
 from config.load_config import RESOURCE_PATH, UI_TYPE
 from env_manager import envs
@@ -40,7 +39,6 @@ def check_file_extensions(f: str):
     return extension
 
 
-_PARALLEL_CONNECTIONS = 8
 _CHUNK_SIZE = 1024 * 1024  # 1 MB
 
 
@@ -58,25 +56,18 @@ async def _download_http(
     headers: dict | None = None,
 ) -> str:
     base_headers = headers or {}
-    content_length = 0
-    accepts_ranges = False
 
     async with AsyncSession() as session:
-        # HEAD to probe range support and resolve filename from Content-Disposition
+        # HEAD to resolve filename from Content-Disposition
         try:
             head = await session.head(
                 url, impersonate="chrome", headers=base_headers, allow_redirects=True
             )
             try:
-                if head.status_code < 400:
-                    content_length = int(head.headers.get("content-length", 0))
-                    accepts_ranges = (
-                        head.headers.get("accept-ranges", "none").lower() == "bytes"
+                if head.status_code < 400 and not filename:
+                    filename = _extract_filename_from_cd(
+                        head.headers.get("content-disposition", "")
                     )
-                    if not filename:
-                        filename = _extract_filename_from_cd(
-                            head.headers.get("content-disposition", "")
-                        )
             finally:
                 await head.aclose()
         except Exception:
@@ -87,82 +78,26 @@ async def _download_http(
 
         filepath = os.path.join(destination, filename)
 
-        desc = filename[:40] + "…" if len(filename) > 40 else filename
-        pbar = tqdm(
-            total=content_length if content_length > 0 else None,
-            unit="B",
-            unit_scale=True,
-            unit_divisor=1024,
-            desc=desc,
-            dynamic_ncols=True,
+        resp = await session.get(
+            url, stream=True, impersonate="chrome", headers=base_headers
         )
-
         try:
-            if accepts_ranges and content_length > 0:
-                # parallel chunked download
-                part = content_length // _PARALLEL_CONNECTIONS
-                ranges = [
-                    (
-                        i * part,
-                        (i + 1) * part - 1
-                        if i < _PARALLEL_CONNECTIONS - 1
-                        else content_length - 1,
-                    )
-                    for i in range(_PARALLEL_CONNECTIONS)
-                ]
+            resp.raise_for_status()
 
-                # pre-allocate file so concurrent seeks are safe
-                async with aiofiles.open(filepath, "wb") as f:
-                    await f.seek(content_length - 1)
-                    await f.write(b"\x00")
-
-                async def fetch_chunk(start: int, end: int) -> None:
-                    chunk_headers = {**base_headers, "Range": f"bytes={start}-{end}"}
-                    resp = await session.get(
-                        url, stream=True, impersonate="chrome", headers=chunk_headers
-                    )
-                    try:
-                        resp.raise_for_status()
-                        async with aiofiles.open(filepath, "r+b") as f:
-                            await f.seek(start)
-                            async for data in resp.aiter_content(
-                                chunk_size=_CHUNK_SIZE
-                            ):
-                                await f.write(data)
-                                pbar.update(len(data))
-                    finally:
-                        await resp.aclose()
-
-                await asyncio.gather(*[fetch_chunk(s, e) for s, e in ranges])
-
-            else:
-                # fallback: single-stream GET
-                resp = await session.get(
-                    url, stream=True, impersonate="chrome", headers=base_headers
+            # try Content-Disposition from response if HEAD didn't give us a filename
+            if not filename or filename == url.split("?")[0].split("/")[-1]:
+                cd_name = _extract_filename_from_cd(
+                    resp.headers.get("content-disposition", "")
                 )
-                try:
-                    resp.raise_for_status()
+                if cd_name:
+                    filename = cd_name
+                    filepath = os.path.join(destination, filename)
 
-                    # try Content-Disposition from response if HEAD didn't give us a filename
-                    if not filename or filename == url.split("?")[0].split("/")[-1]:
-                        cd_name = _extract_filename_from_cd(
-                            resp.headers.get("content-disposition", "")
-                        )
-                        if cd_name:
-                            filename = cd_name
-                            filepath = os.path.join(destination, filename)
-                            pbar.set_description(
-                                filename[:40] + "…" if len(filename) > 40 else filename
-                            )
-
-                    async with aiofiles.open(filepath, "wb") as f:
-                        async for data in resp.aiter_content(chunk_size=_CHUNK_SIZE):
-                            await f.write(data)
-                            pbar.update(len(data))
-                finally:
-                    await resp.aclose()
+            async with aiofiles.open(filepath, "wb") as f:
+                async for data in resp.aiter_content(chunk_size=_CHUNK_SIZE):
+                    await f.write(data)
         finally:
-            pbar.close()
+            await resp.aclose()
 
     return filename
 
