@@ -17,14 +17,18 @@ async def compute_sha256(filepath: str) -> str:
     return await loop.run_in_executor(None, _hash)
 
 
-async def fetch_hf_sha256(owner: str, repo: str, filepath: str, token: str | None = None) -> str | None:
+async def fetch_hf_sha256(
+    owner: str, repo: str, filepath: str, token: str | None = None
+) -> str | None:
     api_url = f"https://huggingface.co/api/models/{owner}/{repo}?blobs=true"
     req_headers = {}
     if token:
         req_headers["Authorization"] = f"Bearer {token}"
     try:
         async with httpx.AsyncClient() as client:
-            r = await client.get(api_url, headers=req_headers, follow_redirects=True, timeout=15)
+            r = await client.get(
+                api_url, headers=req_headers, follow_redirects=True, timeout=15
+            )
             if r.status_code == 200:
                 for sibling in r.json().get("siblings", []):
                     if sibling.get("rfilename") == filepath:
@@ -36,14 +40,18 @@ async def fetch_hf_sha256(owner: str, repo: str, filepath: str, token: str | Non
     return None
 
 
-async def fetch_civitai_sha256(model_version_id: str, token: str | None = None) -> str | None:
+async def fetch_civitai_sha256(
+    model_version_id: str, token: str | None = None
+) -> str | None:
     api_url = f"https://civitai.com/api/v1/model-versions/{model_version_id}"
     req_headers = {}
     if token:
         req_headers["Authorization"] = f"Bearer {token}"
     try:
         async with httpx.AsyncClient() as client:
-            r = await client.get(api_url, headers=req_headers, follow_redirects=True, timeout=10)
+            r = await client.get(
+                api_url, headers=req_headers, follow_redirects=True, timeout=10
+            )
             if r.status_code == 200:
                 for f in r.json().get("files", []):
                     sha256 = f.get("hashes", {}).get("SHA256")

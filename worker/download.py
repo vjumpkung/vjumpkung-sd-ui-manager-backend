@@ -47,7 +47,6 @@ def _extract_filename_from_cd(cd: str) -> str | None:
     return match[0].strip().strip('"') if match else None
 
 
-
 async def _download_http(
     url: str,
     destination: str,
@@ -256,7 +255,9 @@ async def download_async(
                         if expected_sha256:
                             log.info(f"Fetched CivitAI SHA256: {expected_sha256}")
                         else:
-                            log.warning("Could not fetch SHA256 from CivitAI API, falling back to size check")
+                            log.warning(
+                                "Could not fetch SHA256 from CivitAI API, falling back to size check"
+                            )
 
             if parsed_url[1] == "huggingface.co":
                 if getattr(envs, "HUGGINGFACE_TOKEN", ""):
@@ -284,17 +285,24 @@ async def download_async(
                     hf_repo = hf_path_parts[1]
                     hf_filepath = "/".join(hf_path_parts[4:])
                     expected_sha256 = await fetch_hf_sha256(
-                        hf_owner, hf_repo, hf_filepath,
+                        hf_owner,
+                        hf_repo,
+                        hf_filepath,
                         getattr(envs, "HUGGINGFACE_TOKEN", None),
                     )
                     if expected_sha256:
                         log.info(f"Fetched HuggingFace SHA256: {expected_sha256}")
                     else:
-                        log.warning("Could not fetch SHA256 from HuggingFace API, falling back to size check")
+                        log.warning(
+                            "Could not fetch SHA256 from HuggingFace API, falling back to size check"
+                        )
 
             try:
                 await _download_http(
-                    url, destination, filename=hf_filename, headers=hf_headers,
+                    url,
+                    destination,
+                    filename=hf_filename,
+                    headers=hf_headers,
                     expected_sha256=expected_sha256,
                 )
                 await downloadHistory.update_status(id, "COMPLETED")
