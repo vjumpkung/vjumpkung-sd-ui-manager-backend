@@ -1,13 +1,14 @@
 import argparse
 import os
+import subprocess
 
-import gdown
 
-
-def main(path: str, url: str):
-    os.makedirs(path, exist_ok=True)
+def main(path: str, url: str) -> str:
     os.chdir(path)
-    file = gdown.download(url, fuzzy=True)
+    result = subprocess.run(
+        ["gdown", "-q", "--fuzzy", url],
+    )
+    return "success" if result.returncode == 0 else "failed"
 
 
 if __name__ == "__main__":
@@ -30,4 +31,8 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    main(args.path, args.url)
+    status = main(args.path, args.url)
+    if status == "success":
+        exit(0)
+    else:
+        exit(1)

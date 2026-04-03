@@ -376,6 +376,7 @@ async def download_async(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
+                limit=1024 * 1024,  # 1MB limit to handle long progress lines
             )
         except Exception as e:
             res = {
@@ -396,8 +397,16 @@ async def download_async(
         try:
             # read lines as they come in
             assert proc.stdout is not None
-            async for raw_line in proc.stdout:
-                line = raw_line.decode("utf-8").strip("\n")
+            while True:
+                try:
+                    raw_line = await proc.stdout.readline()
+                except ValueError:
+                    # line exceeded StreamReader limit; read and discard the rest of the chunk
+                    await proc.stdout.read(1024 * 1024)
+                    continue
+                if not raw_line:
+                    break
+                line = raw_line.decode("utf-8", errors="replace").strip("\n")
                 print(line, flush=True)
 
         except asyncio.CancelledError:
