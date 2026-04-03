@@ -57,6 +57,8 @@ Key `.env` variables:
 
 **Logging:** `log_manager.py` — Rich-based console logger (no file output); `worker/create_log_file.py` — ensures log files exist on startup.
 
+**Utils:** `utils/generate_uuid.py` — UUID5 generation from URLs; `utils/checksum.py` — SHA256 helpers: `compute_sha256(filepath)` hashes a local file in a thread executor, `fetch_civitai_sha256(model_version_id, token)` fetches expected hash from CivitAI API, `fetch_hf_sha256(owner, repo, filepath, token)` fetches expected hash from HuggingFace Hub API.
+
 ## API Endpoints
 
 | Method | Path | Description |

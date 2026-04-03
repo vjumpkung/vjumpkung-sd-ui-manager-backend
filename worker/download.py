@@ -15,6 +15,7 @@ from env_manager import envs
 from event_handler import manager
 from history_manager import downloadHistory
 from log_manager import log
+from utils.checksum import compute_sha256, fetch_civitai_sha256, fetch_hf_sha256
 from utils.generate_uuid import generate_uuid
 
 PYTHON = sys.executable
@@ -46,33 +47,39 @@ def _extract_filename_from_cd(cd: str) -> str | None:
     return match[0].strip().strip('"') if match else None
 
 
-_BROWSER_UA = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-    "AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/124.0.0.0 Safari/537.36"
-)
-
 
 async def _download_http(
     url: str,
     destination: str,
     filename: str | None = None,
     headers: dict | None = None,
+    expected_sha256: str | None = None,
 ) -> str:
-    request_headers = {"User-Agent": _BROWSER_UA, **(headers or {})}
-
-    # HEAD via curl_cffi to resolve filename and file size (handles Cloudflare on the probe)
+    # HEAD with default agent to check auth/response before downloading
     content_length = 0
     try:
         async with AsyncSession() as session:
             head = await session.head(
                 url,
-                impersonate="chrome",
-                headers=request_headers,
+                headers=headers or {},
                 allow_redirects=True,
             )
             try:
+                if head.status_code == 401:
+                    raise RuntimeError(
+                        f"Authentication required (HTTP 401): API key/token is missing or invalid"
+                    )
+                if head.status_code == 403:
+                    raise RuntimeError(
+                        f"Access denied (HTTP 403): you may need an API key or lack permission to download this file"
+                    )
                 if head.status_code < 400:
+                    content_type = head.headers.get("content-type", "")
+                    if "text/html" in content_type:
+                        raise RuntimeError(
+                            "Server returned an HTML page instead of a file — "
+                            "the URL may require an API key or the model may be behind a login/paywall"
+                        )
                     content_length = int(head.headers.get("content-length", 0))
                     if not filename:
                         filename = _extract_filename_from_cd(
@@ -80,6 +87,8 @@ async def _download_http(
                         )
             finally:
                 await head.aclose()
+    except RuntimeError:
+        raise
     except Exception:
         pass
 
@@ -96,6 +105,24 @@ async def _download_http(
 
     filepath = os.path.join(destination, filename)
 
+    if os.path.exists(filepath):
+        if expected_sha256:
+            print(f"Verifying checksum for existing file: {filename}", flush=True)
+            local_sha256 = await compute_sha256(filepath)
+            if local_sha256 == expected_sha256.lower():
+                print(f"Checksum matches, skipping: {filename}", flush=True)
+                return filename
+            print(f"Checksum mismatch, re-downloading: {filename}", flush=True)
+        else:
+            existing_size = os.path.getsize(filepath)
+            if content_length == 0 or existing_size == content_length:
+                print(f"File already exists, skipping: {filepath}", flush=True)
+                return filename
+            print(
+                f"File exists but size mismatch (local {existing_size}, remote {content_length}), re-downloading",
+                flush=True,
+            )
+
     cmd = [
         "curl",
         "-L",
@@ -103,10 +130,10 @@ async def _download_http(
         "3",
         "--retry-delay",
         "5",
-        "-A",
-        _BROWSER_UA,
         "-o",
         filepath,
+        "-w",
+        "\n%{http_code}",
     ]
 
     for key, value in (headers or {}).items():
@@ -122,14 +149,41 @@ async def _download_http(
     )
 
     assert proc.stdout is not None
+    last_line = ""
     async for raw_line in proc.stdout:
         line = raw_line.decode("utf-8").strip()
         if line:
             print(line, flush=True)
+            last_line = line
 
     return_code = await proc.wait()
     if return_code != 0:
         raise RuntimeError(f"curl exited with code {return_code}")
+
+    http_code = last_line.strip()
+    if http_code.isdigit():
+        code = int(http_code)
+        if code == 401:
+            raise RuntimeError(
+                "Authentication required (HTTP 401): API key/token is missing or invalid"
+            )
+        if code == 403:
+            raise RuntimeError(
+                "Access denied (HTTP 403): you may need an API key or lack permission to download this file"
+            )
+        if code >= 400:
+            raise RuntimeError(f"Download failed: server returned HTTP {code}")
+
+    if expected_sha256:
+        print(f"Verifying checksum after download: {filename}", flush=True)
+        actual_sha256 = await compute_sha256(filepath)
+        if actual_sha256 != expected_sha256.lower():
+            os.remove(filepath)
+            raise RuntimeError(
+                f"Checksum mismatch after download — file deleted. "
+                f"Expected {expected_sha256.lower()}, got {actual_sha256}"
+            )
+        print(f"Checksum verified: {filename}", flush=True)
 
     return filename
 
@@ -188,6 +242,21 @@ async def download_async(
         if parsed_url[1] in ("civitai.com", "huggingface.co"):
             hf_filename = None
             hf_headers = {}
+            expected_sha256 = None
+
+            if parsed_url[1] == "civitai.com":
+                path_parts = parsed_url[2].split("/")
+                if "models" in path_parts:
+                    idx = path_parts.index("models")
+                    if idx + 1 < len(path_parts) and path_parts[idx + 1].isdigit():
+                        expected_sha256 = await fetch_civitai_sha256(
+                            path_parts[idx + 1],
+                            getattr(envs, "CIVITAI_TOKEN", None),
+                        )
+                        if expected_sha256:
+                            log.info(f"Fetched CivitAI SHA256: {expected_sha256}")
+                        else:
+                            log.warning("Could not fetch SHA256 from CivitAI API, falling back to size check")
 
             if parsed_url[1] == "huggingface.co":
                 if getattr(envs, "HUGGINGFACE_TOKEN", ""):
@@ -207,9 +276,26 @@ async def download_async(
                     else:
                         hf_filename = f"{name}{get_extension}"
 
+                # fetch SHA256 from HF Hub API
+                # URL: /resolve/{revision}/{...filepath} → path_parts[3] = 'resolve'
+                hf_path_parts = parsed_url[2].strip("/").split("/")
+                if len(hf_path_parts) >= 5 and hf_path_parts[2] == "resolve":
+                    hf_owner = hf_path_parts[0]
+                    hf_repo = hf_path_parts[1]
+                    hf_filepath = "/".join(hf_path_parts[4:])
+                    expected_sha256 = await fetch_hf_sha256(
+                        hf_owner, hf_repo, hf_filepath,
+                        getattr(envs, "HUGGINGFACE_TOKEN", None),
+                    )
+                    if expected_sha256:
+                        log.info(f"Fetched HuggingFace SHA256: {expected_sha256}")
+                    else:
+                        log.warning("Could not fetch SHA256 from HuggingFace API, falling back to size check")
+
             try:
                 await _download_http(
-                    url, destination, filename=hf_filename, headers=hf_headers
+                    url, destination, filename=hf_filename, headers=hf_headers,
+                    expected_sha256=expected_sha256,
                 )
                 await downloadHistory.update_status(id, "COMPLETED")
                 res = {
