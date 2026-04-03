@@ -53,7 +53,9 @@ class ProgramStatus:
             if temp != self.status:
                 self.status = temp
 
-                send = MonitorMessage(data=MonitorData(status=self.MAP_STATUS[self.status]))
+                send = MonitorMessage(
+                    data=MonitorData(status=self.MAP_STATUS[self.status])
+                )
 
                 await manager.broadcast(send.model_dump_json())
 
