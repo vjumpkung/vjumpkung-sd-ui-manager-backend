@@ -1,8 +1,8 @@
 import asyncio
-import json
 from enum import Enum
 
 from event_handler import manager
+from utils.ws_messages import MonitorData, MonitorMessage
 
 
 class Status(Enum):
@@ -53,14 +53,9 @@ class ProgramStatus:
             if temp != self.status:
                 self.status = temp
 
-                send = {
-                    "type": "monitor",
-                    "data": {
-                        "status": self.MAP_STATUS[self.status],
-                    },
-                }
+                send = MonitorMessage(data=MonitorData(status=self.MAP_STATUS[self.status]))
 
-                await manager.broadcast(json.dumps(send))
+                await manager.broadcast(send.model_dump_json())
 
             await asyncio.sleep(5)
 

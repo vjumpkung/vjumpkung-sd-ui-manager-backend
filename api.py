@@ -16,7 +16,9 @@ from config.load_config import OUTPUT_PATH, RUNPOD_POD_ID, UI_TYPE
 from env_manager import envs
 from event_handler import manager
 from history_manager import downloadHistory
+from utils.enums import DownloadStatus
 from utils.generate_uuid import generate_uuid
+from utils.ws_messages import DownloadData, DownloadMessage
 from worker.check_process import programStatus
 from worker.download import download_async, download_multiple
 from worker.export_zip import _create_zip_file
@@ -154,19 +156,18 @@ async def import_models(request: List[ImportModel], background_tasks: Background
                 model_name = t.name
                 get_data = await downloadHistory.get_by_id(id)
 
-                if get_data["status"] == "FAILED":
-                    await downloadHistory.update_status(id, "RETRYING...")
+                if get_data["status"] == DownloadStatus.FAILED:
+                    await downloadHistory.update_status(id, DownloadStatus.RETRYING)
 
-                    res = {
-                        "type": "download",
-                        "data": {
-                            "id": id,
-                            "name": model_name,
-                            "url": str(t.url),
-                            "model_type": t.type,
-                            "status": "RETRYING",
-                        },
-                    }
+                    res = DownloadMessage(
+                        data=DownloadData(
+                            id=id,
+                            name=model_name,
+                            url=str(t.url),
+                            model_type=t.type,
+                            status=DownloadStatus.RETRYING,
+                        )
+                    )
 
                     task = asyncio.create_task(
                         download_async(id, model_name, str(t.url), t.type)
@@ -175,23 +176,22 @@ async def import_models(request: List[ImportModel], background_tasks: Background
                         lambda: task
                     )  # schedule it after response
 
-                    await manager.broadcast(json.dumps(res))
+                    await manager.broadcast(res.model_dump_json())
 
                 continue
 
             task = asyncio.create_task(download_async(id, t.name, str(t.url), t.type))
-            res = {
-                "type": "download",
-                "data": {
-                    "id": id,
-                    "name": t.name,
-                    "url": str(t.url),
-                    "model_type": t.type,
-                    "status": "IN_QUEUE",
-                },
-            }
-            await manager.broadcast(json.dumps(res))
-            await downloadHistory.put(res["data"])
+            res = DownloadMessage(
+                data=DownloadData(
+                    id=id,
+                    name=t.name,
+                    url=str(t.url),
+                    model_type=t.type,
+                    status=DownloadStatus.IN_QUEUE,
+                )
+            )
+            await manager.broadcast(res.model_dump_json())
+            await downloadHistory.put(res.data.model_dump())
             background_tasks.add_task(lambda: task)
 
         return JSONResponse(
@@ -225,26 +225,25 @@ async def download_custom_model(
         if exists:
             get_data = await downloadHistory.get_by_id(id)
 
-            if get_data["status"] == "FAILED":
-                await downloadHistory.update_status(id, "RETRYING...")
+            if get_data["status"] == DownloadStatus.FAILED:
+                await downloadHistory.update_status(id, DownloadStatus.RETRYING)
 
-                res = {
-                    "type": "download",
-                    "data": {
-                        "id": id,
-                        "name": model_name,
-                        "url": str(request.url),
-                        "model_type": request.model_type,
-                        "status": "RETRYING",
-                    },
-                }
+                res = DownloadMessage(
+                    data=DownloadData(
+                        id=id,
+                        name=model_name,
+                        url=str(request.url),
+                        model_type=request.model_type,
+                        status=DownloadStatus.RETRYING,
+                    )
+                )
 
                 task = asyncio.create_task(
                     download_async(id, model_name, str(request.url), request.model_type)
                 )
                 background_tasks.add_task(lambda: task)  # schedule it after response
 
-                await manager.broadcast(json.dumps(res))
+                await manager.broadcast(res.model_dump_json())
                 return JSONResponse(
                     {
                         "status": "retrying...",
@@ -259,20 +258,19 @@ async def download_custom_model(
                 }
             )
 
-        res = {
-            "type": "download",
-            "data": {
-                "id": id,
-                "name": model_name,
-                "url": str(request.url),
-                "model_type": request.model_type,
-                "status": "IN_QUEUE",
-            },
-        }
+        res = DownloadMessage(
+            data=DownloadData(
+                id=id,
+                name=model_name,
+                url=str(request.url),
+                model_type=request.model_type,
+                status=DownloadStatus.IN_QUEUE,
+            )
+        )
 
-        await manager.broadcast(json.dumps(res))
+        await manager.broadcast(res.model_dump_json())
 
-        await downloadHistory.put(res["data"])
+        await downloadHistory.put(res.data.model_dump())
 
         task = asyncio.create_task(
             download_async(id, model_name, str(request.url), request.model_type)

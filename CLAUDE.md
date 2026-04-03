@@ -35,7 +35,7 @@ Key `.env` variables:
 
 ## Architecture
 
-**Entry point:** `main.py` — configures FastAPI app, mounts routes, starts two background threads on startup:
+**Entry point:** `main.py` — configures FastAPI app, mounts routes, and uses a `lifespan` context manager to start two background async tasks on startup (cancelled on shutdown):
 1. `worker/program_logs.py` — tails `PROGRAM_LOG` file, broadcasts new lines via WebSocket
 2. `worker/check_process.py` — pings UI port (8188/7860/9090) every 5s, broadcasts RUNNING/NOT_RUNNING status
 
@@ -49,7 +49,7 @@ Key `.env` variables:
 
 **UI process control:** `worker/restart_program.py` calls shell scripts (e.g., `/notebooks/stop_process.sh`) that are external to this repo.
 
-**Download history:** `history_manager.py` — in-memory async dict tracking download status (IN_QUEUE, RETRYING, FAILED, etc.), keyed by UUID5 of the URL.
+**Download history:** `history_manager.py` — in-memory async dict tracking download status (`DownloadStatus` enum: `IN_QUEUE`, `DOWNLOADING`, `RETRYING`, `COMPLETED`, `FAILED`), keyed by UUID5 of the URL. `update_status` is typed to `DownloadStatus`.
 
 **Env tokens:** `env_manager.py` — runtime-mutable `CIVITAI_TOKEN` / `HUGGINGFACE_TOKEN` updated via `PUT /api/update_env/{civitai|huggingface}`.
 
@@ -57,7 +57,11 @@ Key `.env` variables:
 
 **Logging:** `log_manager.py` — Rich-based console logger (no file output); `worker/create_log_file.py` — ensures log files exist on startup.
 
-**Utils:** `utils/generate_uuid.py` — UUID5 generation from URLs; `utils/checksum.py` — SHA256 helpers: `compute_sha256(filepath)` hashes a local file in a thread executor, `fetch_civitai_sha256(model_version_id, token)` fetches expected hash from CivitAI API, `fetch_hf_sha256(owner, repo, filepath, token)` fetches expected hash from HuggingFace Hub API.
+**Utils:**
+- `utils/generate_uuid.py` — UUID5 generation from URLs
+- `utils/checksum.py` — SHA256 helpers: `compute_sha256(filepath)` hashes a local file in a thread executor, `fetch_civitai_sha256(model_version_id, token)` fetches expected hash from CivitAI API, `fetch_hf_sha256(owner, repo, filepath, token)` fetches expected hash from HuggingFace Hub API
+- `utils/enums.py` — `DownloadStatus(str, Enum)` with values `IN_QUEUE`, `DOWNLOADING`, `RETRYING`, `COMPLETED`, `FAILED`
+- `utils/ws_messages.py` — Pydantic models for WebSocket message serialization: `DownloadMessage`/`DownloadData` (download events), `MonitorMessage`/`MonitorData` (process status), `LogMessage`/`LogData` (log lines). Use `model_dump_json()` to broadcast.
 
 ## API Endpoints
 
@@ -74,6 +78,10 @@ Key `.env` variables:
 | POST | `/api/download_selected` | Queue selected pack models |
 | POST | `/api/restart` | Trigger UI process restart |
 | WS | `/ws/{client_id}` | WebSocket for real-time events |
+
+## Skills
+
+When working on FastAPI routes, Pydantic models, or any API-related code in this project, automatically trigger the `fastapi` skill before making changes.
 
 ## Key External Dependencies
 

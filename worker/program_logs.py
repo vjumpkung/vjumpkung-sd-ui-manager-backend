@@ -1,10 +1,10 @@
 import asyncio
-import json
 import os
 from datetime import datetime
 
 from config.load_config import PROGRAM_LOG, UI_TYPE
 from event_handler import manager
+from utils.ws_messages import LogData, LogMessage
 from worker.create_log_file import touch_files
 
 
@@ -57,13 +57,7 @@ class ProgramLog:
                             lines = new_data.split("\n")
                             for line in lines:
                                 if line:  # Skip empty lines
-                                    s = {
-                                        "key": self.key,
-                                        "type": "logs",
-                                        "data": {
-                                            "m": line,
-                                        },
-                                    }
+                                    s = LogMessage(key=self.key, data=LogData(m=line))
 
                                     entry = {
                                         "t": datetime.now().isoformat(),
@@ -71,7 +65,7 @@ class ProgramLog:
                                     }
                                     self._log_lst.append(entry)
 
-                                    await manager.broadcast(json.dumps(s))
+                                    await manager.broadcast(s.model_dump_json())
 
                             file_size = current_size
 
@@ -84,13 +78,7 @@ class ProgramLog:
                             lines = new_data.split("\n")
                             for line in lines:
                                 if line:  # Skip empty lines
-                                    s = {
-                                        "key": self.key,
-                                        "type": "logs",
-                                        "data": {
-                                            "m": line,
-                                        },
-                                    }
+                                    s = LogMessage(key=self.key, data=LogData(m=line))
 
                                     entry = {
                                         "t": datetime.now().isoformat(),
@@ -98,7 +86,7 @@ class ProgramLog:
                                     }
                                     self._log_lst.append(entry)
 
-                                    await manager.broadcast(json.dumps(s))
+                                    await manager.broadcast(s.model_dump_json())
                             file_size = current_size
 
                         # time.sleep(0.1)

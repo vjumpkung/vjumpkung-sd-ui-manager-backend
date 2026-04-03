@@ -2,6 +2,8 @@ import asyncio
 from datetime import datetime
 from typing import Any
 
+from utils.enums import DownloadStatus
+
 
 def get_mili_timestamp():
     now = datetime.now()
@@ -31,7 +33,7 @@ class DownloadHistory:
                 },
             )
 
-    async def update_status(self, id: str, status: str) -> None:
+    async def update_status(self, id: str, status: DownloadStatus) -> None:
         async with self._lock:
             if id in self._download_list:
                 self._download_list[id]["status"] = status

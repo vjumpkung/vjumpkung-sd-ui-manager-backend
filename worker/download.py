@@ -1,5 +1,4 @@
 import asyncio
-import json
 import os
 import re
 import shutil
@@ -16,7 +15,9 @@ from event_handler import manager
 from history_manager import downloadHistory
 from log_manager import log
 from utils.checksum import compute_sha256, fetch_civitai_sha256, fetch_hf_sha256
+from utils.enums import DownloadStatus
 from utils.generate_uuid import generate_uuid
+from utils.ws_messages import DownloadData, DownloadMessage
 
 PYTHON = sys.executable
 
@@ -193,20 +194,19 @@ async def download_async(
     async with semaphore:
         type_name = t
         original_url = str(url)
-        start = {
-            "type": "download",
-            "data": {
-                "id": id,
-                "name": name,
-                "url": original_url,
-                "model_type": type_name,
-                "status": "DOWNLOADING",
-            },
-        }
+        start = DownloadMessage(
+            data=DownloadData(
+                id=id,
+                name=name,
+                url=original_url,
+                model_type=type_name,
+                status=DownloadStatus.DOWNLOADING,
+            )
+        )
 
-        await downloadHistory.update_status(id, "DOWNLOADING")
+        await downloadHistory.update_status(id, DownloadStatus.DOWNLOADING)
 
-        await manager.broadcast(json.dumps(start))
+        await manager.broadcast(start.model_dump_json())
 
         if "envs" not in globals():
             envs.get_enviroment_variable()
@@ -305,33 +305,31 @@ async def download_async(
                     headers=hf_headers,
                     expected_sha256=expected_sha256,
                 )
-                await downloadHistory.update_status(id, "COMPLETED")
-                res = {
-                    "type": "download",
-                    "data": {
-                        "id": id,
-                        "name": name,
-                        "url": original_url,
-                        "model_type": type_name,
-                        "status": "COMPLETED",
-                    },
-                }
-                await manager.broadcast(json.dumps(res))
+                await downloadHistory.update_status(id, DownloadStatus.COMPLETED)
+                res = DownloadMessage(
+                    data=DownloadData(
+                        id=id,
+                        name=name,
+                        url=original_url,
+                        model_type=type_name,
+                        status=DownloadStatus.COMPLETED,
+                    )
+                )
+                await manager.broadcast(res.model_dump_json())
                 log.info(f"Download completed: {name}")
                 return True
             except Exception as e:
-                res = {
-                    "type": "download",
-                    "data": {
-                        "id": id,
-                        "name": name,
-                        "url": original_url,
-                        "model_type": type_name,
-                        "status": "FAILED",
-                    },
-                }
-                await downloadHistory.update_status(id, "FAILED")
-                await manager.broadcast(json.dumps(res))
+                res = DownloadMessage(
+                    data=DownloadData(
+                        id=id,
+                        name=name,
+                        url=original_url,
+                        model_type=type_name,
+                        status=DownloadStatus.FAILED,
+                    )
+                )
+                await downloadHistory.update_status(id, DownloadStatus.FAILED)
+                await manager.broadcast(res.model_dump_json())
                 log.error(f"Download failed: {name} ({e})")
                 return False
 
@@ -379,18 +377,17 @@ async def download_async(
                 limit=1024 * 1024,  # 1MB limit to handle long progress lines
             )
         except Exception as e:
-            res = {
-                "type": "download",
-                "data": {
-                    "id": id,
-                    "name": name,
-                    "url": original_url,
-                    "model_type": type_name,
-                    "status": "FAILED",
-                },
-            }
-            await downloadHistory.update_status(id, "FAILED")
-            await manager.broadcast(json.dumps(res))
+            res = DownloadMessage(
+                data=DownloadData(
+                    id=id,
+                    name=name,
+                    url=original_url,
+                    model_type=type_name,
+                    status=DownloadStatus.FAILED,
+                )
+            )
+            await downloadHistory.update_status(id, DownloadStatus.FAILED)
+            await manager.broadcast(res.model_dump_json())
             log.error(f"Download failed: {name} (exit code {e})")
             return False
 
@@ -418,26 +415,25 @@ async def download_async(
 
         return_code = await proc.wait()
 
-        res = {
-            "type": "download",
-            "data": {
-                "id": id,
-                "name": name,
-                "url": original_url,
-                "model_type": type_name,
-                "status": "COMPLETED",
-            },
-        }
+        res = DownloadMessage(
+            data=DownloadData(
+                id=id,
+                name=name,
+                url=original_url,
+                model_type=type_name,
+                status=DownloadStatus.COMPLETED,
+            )
+        )
 
         if return_code == 0:
-            await downloadHistory.update_status(id, "COMPLETED")
-            await manager.broadcast(json.dumps(res))
+            await downloadHistory.update_status(id, DownloadStatus.COMPLETED)
+            await manager.broadcast(res.model_dump_json())
             log.info(f"Download completed: {name}")
             return True
         else:
-            res["data"]["status"] = "FAILED"
-            await downloadHistory.update_status(id, "FAILED")
-            await manager.broadcast(json.dumps(res))
+            res.data.status = DownloadStatus.FAILED
+            await downloadHistory.update_status(id, DownloadStatus.FAILED)
+            await manager.broadcast(res.model_dump_json())
             log.error(f"Download failed: {name} (exit code {return_code})")
             return False
 
@@ -467,24 +463,23 @@ async def download_multiple(packs):
             if exists:
                 get_data = await downloadHistory.get_by_id(id)
 
-                if get_data["status"] == "FAILED":
+                if get_data["status"] == DownloadStatus.FAILED:
                     dl_lst.append(
                         download_async(id, i["name"], str(i["url"]), i["type"], True)
                     )
 
-                    retry_msg = {
-                        "type": "download",
-                        "data": {
-                            "id": id,
-                            "name": i["name"],
-                            "url": str(i["url"]),
-                            "model_type": i["type"],
-                            "status": "RETRYING",
-                        },
-                    }
+                    retry_msg = DownloadMessage(
+                        data=DownloadData(
+                            id=id,
+                            name=i["name"],
+                            url=str(i["url"]),
+                            model_type=i["type"],
+                            status=DownloadStatus.RETRYING,
+                        )
+                    )
 
-                    await manager.broadcast(json.dumps(retry_msg))
-                    await downloadHistory.update_status(id, "RETRYING...")
+                    await manager.broadcast(retry_msg.model_dump_json())
+                    await downloadHistory.update_status(id, DownloadStatus.RETRYING)
                     log.info(
                         f"retry downloading {i['name']} from {str(i['url'])} again..."
                     )
@@ -496,19 +491,18 @@ async def download_multiple(packs):
                 continue
 
             dl_lst.append(download_async(id, i["name"], str(i["url"]), i["type"], True))
-            inqueue = {
-                "type": "download",
-                "data": {
-                    "id": id,
-                    "name": i["name"],
-                    "url": str(i["url"]),
-                    "model_type": i["type"],
-                    "status": "IN_QUEUE",
-                },
-            }
+            inqueue = DownloadMessage(
+                data=DownloadData(
+                    id=id,
+                    name=i["name"],
+                    url=str(i["url"]),
+                    model_type=i["type"],
+                    status=DownloadStatus.IN_QUEUE,
+                )
+            )
 
-            await downloadHistory.put(inqueue["data"])
+            await downloadHistory.put(inqueue.data.model_dump())
 
-            await manager.broadcast(json.dumps(inqueue))
+            await manager.broadcast(inqueue.model_dump_json())
 
     await asyncio.gather(*dl_lst)

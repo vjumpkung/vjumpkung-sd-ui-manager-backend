@@ -1,7 +1,7 @@
 import asyncio
 import json
 import os
-import threading
+from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
@@ -15,7 +15,20 @@ from event_handler import manager
 from worker.check_process import programStatus
 from worker.program_logs import programLog
 
-app = FastAPI(docs_url=None, redoc_url=None)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task1 = asyncio.create_task(programLog.monitor_log())
+    task2 = asyncio.create_task(
+        programStatus.ping_check("127.0.0.1", programStatus.MAP_PORT[CONFIG.UI_TYPE])
+    )
+    yield
+    task1.cancel()
+    task2.cancel()
+    await asyncio.gather(task1, task2, return_exceptions=True)
+
+
+app = FastAPI(docs_url=None, redoc_url=None, lifespan=lifespan)
 
 app.include_router(router)
 
@@ -78,21 +91,6 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
 disable_logging = CONFIG.DEBUG == False  # or whatever your condition is
 
 if __name__ == "__main__":
-    _thread = threading.Thread(
-        target=asyncio.run, args=(programLog.monitor_log(),), daemon=True
-    )
-    _thread2 = threading.Thread(
-        target=asyncio.run,
-        args=(
-            programStatus.ping_check(
-                "127.0.0.1", programStatus.MAP_PORT[CONFIG.UI_TYPE]
-            ),
-        ),
-        daemon=True,
-    )
-    _thread.start()
-    _thread2.start()
-
     uvicorn.run(
         "main:app",
         port=int(CONFIG.PORT),
