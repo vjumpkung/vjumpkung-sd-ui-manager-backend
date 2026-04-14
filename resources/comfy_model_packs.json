@@ -313,6 +313,10 @@
     {
       "name": "FireRed Image Edit 1.1",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/main/resource_list/firered_image_edit_1_1.json"
+    },
+    {
+      "name": "Ovis Image",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ovis_image.json"
     }
   ]
 }
