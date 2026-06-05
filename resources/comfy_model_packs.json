@@ -87,6 +87,14 @@
     {
       "name": "HiDream-E1 bf16",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hidream-e1_full.json"
+    },
+    {
+      "name": "HiDream-O1",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hidream_o1.json"
+    },
+    {
+      "name": "HiDream-O1 Dev",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hidream_o1_dev.json"
     }
   ],
   "Hunyuan Video": [
@@ -277,6 +285,10 @@
     {
       "name": "Longcat Image Edit",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/main/resource_list/longcat_image_edit.json"
+    },
+    {
+      "name": "Longcat Image Edit Turbo",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/main/resource_list/longcat_image_edit_turbo.json"
     }
   ],
   "Ernie Image": [
@@ -289,6 +301,26 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ernie_image_turbo.json"
     }
   ],
+  "Ideogram": [
+    {
+      "name": "Ideogram 4",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ideogram_4.json"
+    },
+    {
+      "name": "Ideogram 4 Unconditional",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ideogram_4_uncond.json"
+    }
+  ],
+  "Microsoft": [
+    {
+      "name": "Lens",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ms_lens.json"
+    },
+    {
+      "name": "Lens Turbo",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ms_lens_turbo.json"
+    }
+  ],
   "Others": [
     {
       "name": "Chroma-1 HD",
@@ -299,7 +331,7 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/omnigen_2.json"
     },
     {
-      "name": "ANIMA Preview",
+      "name": "ANIMA Base v1.0",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/anima.json"
     },
     {
