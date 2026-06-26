@@ -179,6 +179,10 @@
     {
       "name": "WAN2.1 Alpha",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/main/resource_list/wan_2_1_alpha.json"
+    },
+    {
+      "name": "WAN2.1 SCAIL 2",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/main/resource_list/scail_2.json"
     }
   ],
   "LTX2": [
@@ -305,10 +309,6 @@
     {
       "name": "Ideogram 4",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ideogram_4.json"
-    },
-    {
-      "name": "Ideogram 4 Unconditional",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ideogram_4_uncond.json"
     }
   ],
   "Microsoft": [
@@ -319,6 +319,26 @@
     {
       "name": "Lens Turbo",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ms_lens_turbo.json"
+    }
+  ],
+  "Boogu": [
+    {
+      "name": "Boogu Image Edit",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/boogu_image_edit_fp8.json"
+    },
+    {
+      "name": "Boogu Image Turbo",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/boogu_image_turbo_fp8.json"
+    }
+  ],
+  "Krea 2": [
+    {
+      "name": "Krea 2 Turbo",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/krea_2_turbo_fp8.json"
+    },
+    {
+      "name": "Krea 2 Raw",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/krea_2_raw_fp8.json"
     }
   ],
   "Others": [
