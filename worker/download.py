@@ -146,6 +146,7 @@ async def _download_http(
         *cmd,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
+        limit=1024 * 1024 * 100,
     )
 
     assert proc.stdout is not None
