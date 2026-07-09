@@ -13,6 +13,7 @@ class DownloadData(BaseModel):
     url: str
     model_type: str
     status: DownloadStatus
+    sha256: str | None = None
 
 
 class DownloadMessage(BaseModel):

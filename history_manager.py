@@ -20,23 +20,40 @@ class DownloadHistory:
         self._download_list: dict[str, dict[str, Any]] = {}
         self._lock = asyncio.Lock()
 
-    async def put(self, downloadDto: dict[str, Any]) -> None:
+    async def put(self, downloadDto: dict[str, Any]) -> bool:
         async with self._lock:
-            self._download_list.setdefault(
-                downloadDto["id"],
-                {
-                    "name": downloadDto["name"],
-                    "url": downloadDto["url"],
-                    "model_type": downloadDto["model_type"],
-                    "status": downloadDto["status"],
-                    "createdAt": get_mili_timestamp(),
-                },
-            )
+            cache_key = downloadDto.get("sha256") or downloadDto["id"]
+            if cache_key in self._download_list:
+                return False
 
-    async def update_status(self, id: str, status: DownloadStatus) -> None:
+            self._download_list[cache_key] = {
+                "name": downloadDto["name"],
+                "url": downloadDto["url"],
+                "model_type": downloadDto["model_type"],
+                "status": downloadDto["status"],
+                "sha256": downloadDto.get("sha256"),
+                "createdAt": get_mili_timestamp(),
+            }
+            return True
+
+    async def update_status(self, cache_key: str, status: DownloadStatus) -> None:
         async with self._lock:
-            if id in self._download_list:
-                self._download_list[id]["status"] = status
+            if cache_key in self._download_list:
+                self._download_list[cache_key]["status"] = status
+
+    async def update_status_if_current(
+        self,
+        cache_key: str,
+        expected_status: DownloadStatus,
+        status: DownloadStatus,
+    ) -> bool:
+        async with self._lock:
+            download = self._download_list.get(cache_key)
+            if not download or download["status"] != expected_status:
+                return False
+
+            download["status"] = status
+            return True
 
     async def get(self) -> dict[str, dict[str, Any]]:
         async with self._lock:
@@ -44,18 +61,19 @@ class DownloadHistory:
                 sorted(self._download_list.items(), key=lambda x: x[1]["createdAt"])
             )
 
-    async def is_exists(self, id: str) -> bool:
+    async def is_exists(self, cache_key: str) -> bool:
         async with self._lock:
-            return id in self._download_list
+            return cache_key in self._download_list
 
-    async def get_by_id(self, id: str) -> dict[str, Any] | None:
+    async def get_by_id(self, cache_key: str) -> dict[str, Any] | None:
         async with self._lock:
-            return self._download_list.get(id)
+            return self._download_list.get(cache_key)
 
     async def delete(self, downloadDto: dict[str, Any]) -> None:
         async with self._lock:
-            if downloadDto["id"] in self._download_list:
-                del self._download_list[downloadDto["id"]]
+            cache_key = downloadDto.get("sha256") or downloadDto["id"]
+            if cache_key in self._download_list:
+                del self._download_list[cache_key]
 
 
 downloadHistory = DownloadHistory()

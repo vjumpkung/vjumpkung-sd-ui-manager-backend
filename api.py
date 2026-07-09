@@ -14,13 +14,9 @@ from pydantic import BaseModel, HttpUrl
 
 from config.load_config import OUTPUT_PATH, RUNPOD_POD_ID, UI_TYPE
 from env_manager import envs
-from event_handler import manager
 from history_manager import downloadHistory
-from utils.enums import DownloadStatus
-from utils.generate_uuid import generate_uuid
-from utils.ws_messages import DownloadData, DownloadMessage
 from worker.check_process import programStatus
-from worker.download import download_async, download_multiple
+from worker.download import download_multiple, queue_download
 from worker.export_zip import _create_zip_file
 from worker.program_logs import programLog
 from worker.restart_program import restart_program
@@ -145,54 +141,10 @@ async def download_selected(
 
 
 @router.post("/import_models")
-async def import_models(request: List[ImportModel], background_tasks: BackgroundTasks):
+async def import_models(request: List[ImportModel]):
     try:
         for t in request:
-            id = generate_uuid(str(t.url))
-
-            exists = await downloadHistory.is_exists(id)
-
-            if exists:
-                model_name = t.name
-                get_data = await downloadHistory.get_by_id(id)
-
-                if get_data["status"] == DownloadStatus.FAILED:
-                    await downloadHistory.update_status(id, DownloadStatus.RETRYING)
-
-                    res = DownloadMessage(
-                        data=DownloadData(
-                            id=id,
-                            name=model_name,
-                            url=str(t.url),
-                            model_type=t.type,
-                            status=DownloadStatus.RETRYING,
-                        )
-                    )
-
-                    task = asyncio.create_task(
-                        download_async(id, model_name, str(t.url), t.type)
-                    )
-                    background_tasks.add_task(
-                        lambda: task
-                    )  # schedule it after response
-
-                    await manager.broadcast(res.model_dump_json())
-
-                continue
-
-            task = asyncio.create_task(download_async(id, t.name, str(t.url), t.type))
-            res = DownloadMessage(
-                data=DownloadData(
-                    id=id,
-                    name=t.name,
-                    url=str(t.url),
-                    model_type=t.type,
-                    status=DownloadStatus.IN_QUEUE,
-                )
-            )
-            await manager.broadcast(res.model_dump_json())
-            await downloadHistory.put(res.data.model_dump())
-            background_tasks.add_task(lambda: task)
+            await queue_download(t.name, str(t.url), t.type)
 
         return JSONResponse(
             {
@@ -209,73 +161,36 @@ async def import_models(request: List[ImportModel], background_tasks: Background
 
 @router.post("/download_custom_model")
 async def download_custom_model(
-    request: ModelDownloadRequest, background_tasks: BackgroundTasks
+    request: ModelDownloadRequest,
 ):
     try:
-        model_name = (
-            request.model_type
-            if (request.name == "") or (request.name == None)
-            else request.name
-        )
+        model_name = request.model_type if request.name in ("", None) else request.name
 
-        id = generate_uuid(str(request.url))
+        result = await queue_download(model_name, str(request.url), request.model_type)
 
-        exists = await downloadHistory.is_exists(id)
-
-        if exists:
-            get_data = await downloadHistory.get_by_id(id)
-
-            if get_data["status"] == DownloadStatus.FAILED:
-                await downloadHistory.update_status(id, DownloadStatus.RETRYING)
-
-                res = DownloadMessage(
-                    data=DownloadData(
-                        id=id,
-                        name=model_name,
-                        url=str(request.url),
-                        model_type=request.model_type,
-                        status=DownloadStatus.RETRYING,
-                    )
-                )
-
-                task = asyncio.create_task(
-                    download_async(id, model_name, str(request.url), request.model_type)
-                )
-                background_tasks.add_task(lambda: task)  # schedule it after response
-
-                await manager.broadcast(res.model_dump_json())
-                return JSONResponse(
-                    {
-                        "status": "retrying...",
-                        "message": "Download request received but skip",
-                    }
-                )
-
+        if result.action == "retrying":
             return JSONResponse(
                 {
-                    "status": "duplicated",
-                    "message": "Download request received but skip",
+                    "status": "retrying",
+                    "message": "Download request is retrying.",
                 }
             )
 
-        res = DownloadMessage(
-            data=DownloadData(
-                id=id,
-                name=model_name,
-                url=str(request.url),
-                model_type=request.model_type,
-                status=DownloadStatus.IN_QUEUE,
+        if result.action == "duplicate":
+            return JSONResponse(
+                {
+                    "status": "duplicated",
+                    "message": "An equivalent download is already queued or complete.",
+                }
             )
-        )
 
-        await manager.broadcast(res.model_dump_json())
-
-        await downloadHistory.put(res.data.model_dump())
-
-        task = asyncio.create_task(
-            download_async(id, model_name, str(request.url), request.model_type)
-        )
-        background_tasks.add_task(lambda: task)  # schedule it after response
+        if result.action == "already_downloaded":
+            return JSONResponse(
+                {
+                    "status": "already_downloaded",
+                    "message": "A local file already matches the expected SHA256.",
+                }
+            )
 
         return JSONResponse(
             {
