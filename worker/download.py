@@ -438,7 +438,7 @@ async def queue_download(
                     DownloadStatus.COMPLETED,
                 )
                 if not updated:
-                    return QueueDownloadResult("duplicate")
+                    return QueueDownloadResult(action="duplicate")
                 completed = _download_message(
                     preparation.cache_key,
                     name,
@@ -448,15 +448,15 @@ async def queue_download(
                     preparation.expected_sha256,
                 )
                 await manager.broadcast(completed.model_dump_json())
-            return QueueDownloadResult("already_downloaded")
+            return QueueDownloadResult(action="already_downloaded")
 
         if status not in {DownloadStatus.FAILED, DownloadStatus.COMPLETED}:
-            return QueueDownloadResult("duplicate")
+            return QueueDownloadResult(action="duplicate")
 
         # A completed cache entry is only authoritative when its file still matches
         # the expected checksum. A missing or mismatched file must be downloaded again.
         if status == DownloadStatus.COMPLETED and not preparation.expected_sha256:
-            return QueueDownloadResult("duplicate")
+            return QueueDownloadResult(action="duplicate")
 
         queue_status = (
             DownloadStatus.RETRYING
@@ -467,7 +467,7 @@ async def queue_download(
             preparation.cache_key, status, queue_status
         )
         if not updated:
-            return QueueDownloadResult("duplicate")
+            return QueueDownloadResult(action="duplicate")
         message = _download_message(
             preparation.cache_key,
             name,
@@ -479,7 +479,8 @@ async def queue_download(
         await manager.broadcast(message.model_dump_json())
         task = _start_download(preparation, name, url, model_type, from_model_pack)
         return QueueDownloadResult(
-            "retrying" if queue_status == DownloadStatus.RETRYING else "queued", task
+            action="retrying" if queue_status == DownloadStatus.RETRYING else "queued",
+            task=task,
         )
 
     if preparation.file_matches_sha256:
@@ -493,9 +494,9 @@ async def queue_download(
         )
         inserted = await downloadHistory.put(completed.data.model_dump())
         if not inserted:
-            return QueueDownloadResult("duplicate")
+            return QueueDownloadResult(action="duplicate")
         await manager.broadcast(completed.model_dump_json())
-        return QueueDownloadResult("already_downloaded")
+        return QueueDownloadResult(action="already_downloaded")
 
     in_queue = _download_message(
         preparation.cache_key,
@@ -507,10 +508,10 @@ async def queue_download(
     )
     inserted = await downloadHistory.put(in_queue.data.model_dump())
     if not inserted:
-        return QueueDownloadResult("duplicate")
+        return QueueDownloadResult(action="duplicate")
     await manager.broadcast(in_queue.model_dump_json())
     task = _start_download(preparation, name, url, model_type, from_model_pack)
-    return QueueDownloadResult("queued", task)
+    return QueueDownloadResult(action="queued", task=task)
 
 
 async def download_async(
