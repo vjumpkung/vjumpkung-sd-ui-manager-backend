@@ -60,6 +60,15 @@ class QueueDownloadResult(BaseModel):
     task: asyncio.Task[bool] | None = None
 
 
+class HuggingFaceDownloadTarget(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    repo_id: str
+    repo_type: Literal["model", "dataset", "space"]
+    revision: str
+    filepath: str
+
+
 def _get_download_destination(model_type: str) -> tuple[str, str]:
     destination_type = model_type
 
@@ -167,7 +176,7 @@ async def prepare_download(
     name: str, url: str, model_type: str, from_model_pack: bool = False
 ) -> DownloadPreparation:
     """Resolve a source checksum and validate the target file before queueing."""
-    envs.get_enviroment_variable()
+    envs.get_environment_variable()
 
     destination_type, destination = _get_download_destination(model_type)
     await asyncio.to_thread(os.makedirs, destination, exist_ok=True)
@@ -261,6 +270,112 @@ def _get_huggingface_filename(
         return f"{name}{extension}"
 
     return url_filename
+
+
+def _parse_huggingface_download_url(
+    url: str,
+) -> HuggingFaceDownloadTarget | None:
+    """Parse a Hub file URL into arguments accepted by ``hf download``."""
+    parsed_url = urlparse.urlparse(url)
+    if parsed_url.hostname not in HUGGINGFACE_HOSTS:
+        return None
+
+    path_parts = parsed_url.path.strip("/").split("/")
+    repo_type: Literal["model", "dataset", "space"] = "model"
+    repo_start = 0
+
+    if path_parts and path_parts[0] in {"datasets", "spaces"}:
+        repo_type = "dataset" if path_parts[0] == "datasets" else "space"
+        repo_start = 1
+
+    marker_index = repo_start + 2
+    if len(path_parts) <= marker_index + 2 or path_parts[marker_index] not in {
+        "resolve",
+        "blob",
+    }:
+        return None
+
+    owner, repo = [
+        urlparse.unquote(part) for part in path_parts[repo_start : repo_start + 2]
+    ]
+    revision = urlparse.unquote(path_parts[marker_index + 1])
+    filepath = "/".join(
+        urlparse.unquote(part) for part in path_parts[marker_index + 2 :]
+    )
+    filepath_parts = filepath.split("/")
+
+    if (
+        not owner
+        or not repo
+        or not revision
+        or not filepath_parts
+        or "/" in owner
+        or "\\" in owner
+        or "/" in repo
+        or "\\" in repo
+        or "\\" in filepath
+        or any(part in {"", ".", ".."} for part in filepath_parts)
+    ):
+        return None
+
+    return HuggingFaceDownloadTarget(
+        repo_id=f"{owner}/{repo}",
+        repo_type=repo_type,
+        revision=revision,
+        filepath=filepath,
+    )
+
+
+def _build_huggingface_cli_command(
+    hf_executable: str,
+    target: HuggingFaceDownloadTarget,
+    local_dir: str,
+) -> list[str]:
+    command = [
+        hf_executable,
+        "download",
+        target.repo_id,
+        target.filepath,
+        "--revision",
+        target.revision,
+        "--local-dir",
+        local_dir,
+    ]
+    if target.repo_type != "model":
+        command.extend(["--repo-type", target.repo_type])
+    return command
+
+
+def _get_huggingface_staging_paths(
+    destination: str,
+    download_id: str,
+    filepath: str,
+) -> tuple[str, str]:
+    staging_key = hashlib.sha256(download_id.encode("utf-8")).hexdigest()
+    staging_dir = os.path.join(destination, ".hf-download", staging_key)
+    source_path = os.path.join(staging_dir, *filepath.split("/"))
+    return staging_dir, source_path
+
+
+def _finalize_huggingface_download(
+    source_path: str,
+    destination: str,
+    filename: str,
+    staging_dir: str,
+) -> None:
+    if not os.path.isfile(source_path):
+        raise FileNotFoundError(
+            f"hf CLI completed but did not create the expected file: {source_path}"
+        )
+
+    os.replace(source_path, os.path.join(destination, filename))
+    shutil.rmtree(staging_dir)
+
+    staging_parent = os.path.dirname(staging_dir)
+    try:
+        os.rmdir(staging_parent)
+    except OSError:
+        pass
 
 
 def _redact_command(command: list[str]) -> list[str]:
@@ -539,7 +654,7 @@ async def download_async(
 
         await manager.broadcast(start.model_dump_json())
 
-        envs.get_enviroment_variable()
+        envs.get_environment_variable()
         t, destination = _get_download_destination(t)
         os.makedirs(destination, exist_ok=True)
 
@@ -587,34 +702,65 @@ async def download_async(
                 log.error(f"Download failed: {name} ({e})")
                 return False
 
-        # Hugging Face and ordinary HTTP URLs use aria2c.
-        aria2_cmd = [
-            "aria2c",
-            "--console-log-level=error",
-            "-c",
-            "-x",
-            "8",
-            "-s",
-            "8",
-            "-k",
-            "1M",
-            "--retry-wait=5",
-            "--max-tries=3",
-            url,
-            f"--dir={destination}",
-            "--download-result=hide",
-        ]
-
+        subprocess_env = None
+        hf_staging_dir = None
+        hf_source_path = None
         if hostname in HUGGINGFACE_HOSTS:
             filename = filename or _get_huggingface_filename(
                 url, name, t, id, from_model_pack
             )
-            aria2_cmd.append(f"--out={filename}")
 
+        hf_executable = shutil.which("hf") if hostname in HUGGINGFACE_HOSTS else None
+        hf_target = (
+            _parse_huggingface_download_url(url) if hf_executable is not None else None
+        )
+
+        if hf_executable is not None and hf_target is not None:
+            hf_staging_dir, hf_source_path = _get_huggingface_staging_paths(
+                destination, id, hf_target.filepath
+            )
+            os.makedirs(hf_staging_dir, exist_ok=True)
+            cmd = _build_huggingface_cli_command(
+                hf_executable, hf_target, hf_staging_dir
+            )
+            subprocess_env = os.environ.copy()
             if getattr(envs, "HUGGINGFACE_TOKEN", ""):
-                aria2_cmd.append(
-                    f"--header=Authorization: Bearer {envs.HUGGINGFACE_TOKEN}"
+                subprocess_env["HF_TOKEN"] = envs.HUGGINGFACE_TOKEN
+            log.info("Using hf CLI for Hugging Face download")
+        else:
+            aria2_cmd = [
+                "aria2c",
+                "--console-log-level=error",
+                "-c",
+                "-x",
+                "8",
+                "-s",
+                "8",
+                "-k",
+                "1M",
+                "--retry-wait=5",
+                "--max-tries=3",
+                url,
+                f"--dir={destination}",
+                "--download-result=hide",
+            ]
+
+            if hostname in HUGGINGFACE_HOSTS:
+                aria2_cmd.append(f"--out={filename}")
+
+                if getattr(envs, "HUGGINGFACE_TOKEN", ""):
+                    aria2_cmd.append(
+                        f"--header=Authorization: Bearer {envs.HUGGINGFACE_TOKEN}"
+                    )
+
+                fallback_reason = (
+                    "hf CLI is not installed"
+                    if hf_executable is None
+                    else "the Hugging Face URL is not a supported file URL"
                 )
+                log.warning(f"{fallback_reason}; falling back to aria2c")
+
+            cmd = aria2_cmd
 
         # if it's a Google Drive link, delegate to your google_drive_download script
         if hostname == "drive.google.com":
@@ -628,8 +774,6 @@ async def download_async(
                 url,
             ]
             cmd = gd_cmd
-        else:
-            cmd = aria2_cmd
 
         log.info(f"executing command: {_redact_command(cmd)}")
 
@@ -640,6 +784,7 @@ async def download_async(
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
                 limit=1024 * 1024,  # 1MB limit to handle long progress lines
+                env=subprocess_env,
             )
         except Exception as e:
             res = _download_message(
@@ -678,6 +823,25 @@ async def download_async(
             return False
 
         return_code = await proc.wait()
+        failure_reason = f"exit code {return_code}"
+
+        if (
+            return_code == 0
+            and hf_source_path is not None
+            and hf_staging_dir is not None
+            and filename is not None
+        ):
+            try:
+                await asyncio.to_thread(
+                    _finalize_huggingface_download,
+                    hf_source_path,
+                    destination,
+                    filename,
+                    hf_staging_dir,
+                )
+            except OSError as exc:
+                return_code = 1
+                failure_reason = str(exc)
 
         res = _download_message(
             id,
@@ -722,7 +886,7 @@ async def download_async(
             res.data.status = DownloadStatus.FAILED
             await downloadHistory.update_status(id, DownloadStatus.FAILED)
             await manager.broadcast(res.model_dump_json())
-            log.error(f"Download failed: {name} (exit code {return_code})")
+            log.error(f"Download failed: {name} ({failure_reason})")
             return False
 
 

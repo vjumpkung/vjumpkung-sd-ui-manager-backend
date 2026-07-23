@@ -116,7 +116,7 @@ async def update_api_key(
     if api_key_type == "civitai":
         envs.CIVITAI_TOKEN = value
     elif api_key_type == "huggingface":
-        envs.HUGGINGFACE_TOKEN = value
+        envs.set_huggingface_token(value)
 
 
 @router.post("/download_selected")

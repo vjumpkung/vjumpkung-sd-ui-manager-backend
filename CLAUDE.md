@@ -28,7 +28,7 @@ Key `.env` variables:
 - `OUTPUT_PATH`: Where generated images are stored
 - `LOG_PATH`: Path to UI process log file
 - `PROGRAM_LOG`: Path to the SD UI process log file tailed by the log worker
-- `CIVITAI_TOKEN` / `HF_TOKEN`: API tokens for downloads
+- `CIVITAI_TOKEN` / `HUGGINGFACE_TOKEN` / `HF_TOKEN`: API tokens for downloads. `HUGGINGFACE_TOKEN` and `HF_TOKEN` are synchronized for Hugging Face CLI compatibility.
 - `RUNPOD_POD_ID`: RunPod pod ID exposed via `/api/checkcuda`
 - `DEBUG`: Enables uvicorn logging when `True`
 - `RELOAD`: Enables uvicorn hot-reload
@@ -41,7 +41,7 @@ Key `.env` variables:
 
 **Static file serving:** `/_next` is mounted as a `StaticFiles` directory. All other non-`/api` and non-`/ws` paths fall through to `serve_nextjs()`, which tries to serve from `web/`, falls back to `web/index.html` for client-side routing. Paths starting with `api/` or `ws/` are explicitly rejected with 404 to avoid shadowing those routers.
 
-**Download flow:** `api.py` → `worker/download.py` → spawns `aria2c` subprocess (or `gdown` for Google Drive) → streams stdout to history/WebSocket. UUID5 is generated from URL to deduplicate downloads.
+**Download flow:** `api.py` → `worker/download.py` → prefers the `hf` CLI for Hugging Face file URLs when it is available at download time, otherwise spawns `aria2c` (or `gdown` for Google Drive) → streams stdout to history/WebSocket. SHA256 or a URL hash is used to deduplicate downloads.
 
 **WebSocket:** `event_handler.py` manages connections. All status changes, log lines, and download progress broadcast to all connected clients at `/ws/{client_id}`.
 
@@ -85,6 +85,7 @@ When working on FastAPI routes, Pydantic models, or any API-related code in this
 
 ## Key External Dependencies
 
-- `aria2c` must be installed on the system (used for all model downloads)
+- `aria2c` must be installed on the system (used for ordinary HTTP downloads and as the Hugging Face fallback)
+- `hf` is optional; when the Hugging Face CLI is on `PATH`, Hugging Face file URLs use `hf download`
 - Shell scripts at `/notebooks/` or `/invokeai/` for start/stop operations (external, deployment-specific)
 - PyTorch (optional) — imported conditionally for CUDA/GPU detection; `ZIMAGE` UI type skips this
