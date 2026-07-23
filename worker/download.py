@@ -4,9 +4,10 @@ import os
 import re
 import shutil
 import sys
+import tempfile
 import urllib.parse as urlparse
+from email.message import Message
 from typing import Literal
-from urllib.parse import urlencode
 
 import httpx
 from curl_cffi.requests import AsyncSession
@@ -80,18 +81,9 @@ def _get_download_destination(model_type: str) -> tuple[str, str]:
     return destination_type, os.path.join(RESOURCE_PATH, destination_type)
 
 
-def _with_civitai_token(url: str) -> str:
-    parsed_url = urlparse.urlparse(url)
-    if parsed_url.hostname not in CIVITAI_HOSTS or not getattr(
-        envs, "CIVITAI_TOKEN", ""
-    ):
-        return url
-
-    url_parts = list(parsed_url)
-    query = dict(urlparse.parse_qsl(url_parts[4]))
-    query.setdefault("token", envs.CIVITAI_TOKEN)
-    url_parts[4] = urlencode(query)
-    return urlparse.urlunparse(url_parts)
+def _get_civitai_headers() -> dict[str, str]:
+    token = getattr(envs, "CIVITAI_TOKEN", "")
+    return {"Authorization": f"Bearer {token}"} if token else {}
 
 
 async def _fetch_expected_sha256(url: str) -> str | None:
@@ -128,10 +120,16 @@ async def _fetch_expected_sha256(url: str) -> str | None:
     return None
 
 
-async def _get_http_filename(url: str) -> str | None:
+async def _get_http_filename(
+    url: str, headers: dict[str, str] | None = None
+) -> str | None:
     try:
         async with AsyncSession() as session:
-            response = await session.head(url, allow_redirects=True)
+            response = await session.head(
+                url,
+                headers=headers or {},
+                allow_redirects=True,
+            )
             try:
                 if response.status_code >= 400:
                     return None
@@ -191,7 +189,7 @@ async def prepare_download(
     filename = None
 
     if expected_sha256 and hostname in CIVITAI_HOSTS:
-        filename = await _get_http_filename(_with_civitai_token(url))
+        filename = await _get_http_filename(url, _get_civitai_headers())
     elif expected_sha256 and hostname in HUGGINGFACE_HOSTS:
         filename = _get_huggingface_filename(
             url, name, destination_type, cache_key, from_model_pack
@@ -388,17 +386,42 @@ def _redact_command(command: list[str]) -> list[str]:
 
 
 def _extract_filename_from_cd(cd: str) -> str | None:
-    match = re.findall(
-        r"filename\*?=(?:UTF-8''|\"?)([^\";\r\n]+)\"?", cd, re.IGNORECASE
+    if not cd:
+        return None
+
+    message = Message()
+    message["Content-Disposition"] = cd
+    filename = message.get_filename()
+    if not filename:
+        return None
+
+    filename = os.path.basename(filename.replace("\\", "/")).strip()
+    return filename if filename not in {"", ".", ".."} else None
+
+
+def _extract_filename_from_response_headers(headers: str) -> str | None:
+    content_dispositions = re.findall(
+        r"^content-disposition:\s*(.+?)\r?$",
+        headers,
+        re.IGNORECASE | re.MULTILINE,
     )
-    return match[0].strip().strip('"') if match else None
+    for content_disposition in reversed(content_dispositions):
+        filename = _extract_filename_from_cd(content_disposition)
+        if filename:
+            return filename
+    return None
+
+
+def _read_response_filename(headers_path: str) -> str | None:
+    with open(headers_path, encoding="latin-1") as headers_file:
+        return _extract_filename_from_response_headers(headers_file.read())
 
 
 async def _download_http(
     url: str,
     destination: str,
     filename: str | None = None,
-    headers: dict | None = None,
+    headers: dict[str, str] | None = None,
     expected_sha256: str | None = None,
 ) -> str:
     # HEAD with default agent to check auth/response before downloading
@@ -413,11 +436,13 @@ async def _download_http(
             try:
                 if head.status_code == 401:
                     raise RuntimeError(
-                        f"Authentication required (HTTP 401): API key/token is missing or invalid"
+                        "Authentication required (HTTP 401): API key/token is missing "
+                        "or invalid"
                     )
                 if head.status_code == 403:
                     raise RuntimeError(
-                        f"Access denied (HTTP 403): you may need an API key or lack permission to download this file"
+                        "Access denied (HTTP 403): you may need an API key or lack "
+                        "permission to download this file"
                     )
                 if head.status_code < 400:
                     content_type = head.headers.get("content-type", "")
@@ -438,8 +463,8 @@ async def _download_http(
     except Exception:
         pass
 
-    if not filename:
-        filename = url.split("?")[0].split("/")[-1]
+    fallback_filename = os.path.basename(urlparse.urlparse(url).path)
+    filename = filename or fallback_filename
 
     if content_length > 0:
         free = shutil.disk_usage(destination).free
@@ -449,9 +474,9 @@ async def _download_http(
                 f"free {free / 1024**3:.2f} GB"
             )
 
-    filepath = os.path.join(destination, filename)
+    filepath = os.path.join(destination, filename) if filename else None
 
-    if os.path.exists(filepath):
+    if filepath and os.path.exists(filepath):
         if expected_sha256:
             print(f"Verifying checksum for existing file: {filename}", flush=True)
             local_sha256 = await compute_sha256(filepath)
@@ -469,70 +494,89 @@ async def _download_http(
                 flush=True,
             )
 
-    cmd = [
-        "curl",
-        "-L",
-        "--retry",
-        "3",
-        "--retry-delay",
-        "5",
-        "-o",
-        filepath,
-        "-w",
-        "\n%{http_code}",
-    ]
+    with tempfile.TemporaryDirectory(
+        prefix=".download-",
+        dir=destination,
+    ) as download_temp_dir:
+        body_path = os.path.join(download_temp_dir, "body.part")
+        headers_path = os.path.join(download_temp_dir, "response.headers")
+        cmd = [
+            "curl",
+            "-L",
+            "--retry",
+            "3",
+            "--retry-delay",
+            "5",
+            "-D",
+            headers_path,
+            "-o",
+            body_path,
+            "-w",
+            "\n%{http_code}",
+        ]
 
-    for key, value in (headers or {}).items():
-        if key.lower() != "user-agent":
-            cmd.extend(["-H", f"{key}: {value}"])
+        for key, value in (headers or {}).items():
+            if key.lower() != "user-agent":
+                cmd.extend(["-H", f"{key}: {value}"])
 
-    cmd.append(url)
+        cmd.append(url)
 
-    proc = await asyncio.create_subprocess_exec(
-        *cmd,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.STDOUT,
-        limit=1024 * 1024 * 100,
-    )
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+            limit=1024 * 1024 * 100,
+        )
 
-    assert proc.stdout is not None
-    last_line = ""
-    async for raw_line in proc.stdout:
-        line = raw_line.decode("utf-8").strip()
-        if line:
-            print(line, flush=True)
-            last_line = line
+        assert proc.stdout is not None
+        last_line = ""
+        async for raw_line in proc.stdout:
+            line = raw_line.decode("utf-8").strip()
+            if line:
+                print(line, flush=True)
+                last_line = line
 
-    return_code = await proc.wait()
-    if return_code != 0:
-        raise RuntimeError(f"curl exited with code {return_code}")
+        return_code = await proc.wait()
+        if return_code != 0:
+            raise RuntimeError(f"curl exited with code {return_code}")
 
-    http_code = last_line.strip()
-    if http_code.isdigit():
-        code = int(http_code)
-        if code == 401:
-            raise RuntimeError(
-                "Authentication required (HTTP 401): API key/token is missing or invalid"
-            )
-        if code == 403:
-            raise RuntimeError(
-                "Access denied (HTTP 403): you may need an API key or lack permission to download this file"
-            )
-        if code >= 400:
-            raise RuntimeError(f"Download failed: server returned HTTP {code}")
+        http_code = last_line.strip()
+        if http_code.isdigit():
+            code = int(http_code)
+            if code == 401:
+                raise RuntimeError(
+                    "Authentication required (HTTP 401): API key/token is missing "
+                    "or invalid"
+                )
+            if code == 403:
+                raise RuntimeError(
+                    "Access denied (HTTP 403): you may need an API key or lack "
+                    "permission to download this file"
+                )
+            if code >= 400:
+                raise RuntimeError(f"Download failed: server returned HTTP {code}")
 
-    if expected_sha256:
-        print(f"Verifying checksum after download: {filename}", flush=True)
-        actual_sha256 = await compute_sha256(filepath)
-        if actual_sha256 != expected_sha256.lower():
-            os.remove(filepath)
-            raise RuntimeError(
-                f"Checksum mismatch after download — file deleted. "
-                f"Expected {expected_sha256.lower()}, got {actual_sha256}"
-            )
-        print(f"Checksum verified: {filename}", flush=True)
+        response_filename = await asyncio.to_thread(
+            _read_response_filename,
+            headers_path,
+        )
+        filename = response_filename or filename
+        if not filename:
+            raise RuntimeError("Download response did not provide a usable filename")
+        filepath = os.path.join(destination, filename)
 
-    return filename
+        if expected_sha256:
+            print(f"Verifying checksum after download: {filename}", flush=True)
+            actual_sha256 = await compute_sha256(body_path)
+            if actual_sha256 != expected_sha256.lower():
+                raise RuntimeError(
+                    "Checksum mismatch after download — temporary file deleted. "
+                    f"Expected {expected_sha256.lower()}, got {actual_sha256}"
+                )
+            print(f"Checksum verified: {filename}", flush=True)
+
+        await asyncio.to_thread(os.replace, body_path, filepath)
+        return filename
 
 
 async def queue_download(
@@ -664,9 +708,6 @@ async def download_async(
         parsed_url = urlparse.urlparse(url)
         hostname = parsed_url.hostname or ""
 
-        if hostname in CIVITAI_HOSTS:
-            url = _with_civitai_token(url)
-
         # CivitAI needs cURL. Hugging Face continues through aria2c below.
         if hostname in CIVITAI_HOSTS:
             try:
@@ -674,6 +715,7 @@ async def download_async(
                     url,
                     destination,
                     filename=filename,
+                    headers=_get_civitai_headers(),
                     expected_sha256=expected_sha256,
                 )
                 await downloadHistory.update_status(id, DownloadStatus.COMPLETED)
