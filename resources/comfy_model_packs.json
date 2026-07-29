@@ -75,10 +75,6 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_9b_base.json"
     },
     {
-      "name": "Flux.2 Klein 9B Base int8 ConvRot",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_9b_base_int8_convrot.json"
-    },
-    {
       "name": "Flux.2 Klein 9B nvfp4 (for 50 series)",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_9b_fp4.json"
     },
@@ -397,10 +393,6 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ernie_image.json"
     },
     {
-      "name": "Ernie Image int8 ConvRot",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ernie_image_int8_convrot.json"
-    },
-    {
       "name": "Ernie Image Turbo",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ernie_image_turbo.json"
     }
@@ -503,10 +495,6 @@
     {
       "name": "Chroma-1 HD",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/chroma.json"
-    },
-    {
-      "name": "Chroma-1 HD int8 ConvRot",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/chroma_int8_convrot.json"
     },
     {
       "name": "Omnigen 2",
