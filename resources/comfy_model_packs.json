@@ -491,6 +491,24 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/mage_flow_edit_turbo_int8_convrot.json"
     }
   ],
+  "Minimax H3": [
+    {
+      "name": "Minimax H3 FL2VA",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/minimax_h3_fl2va_int8_convrot.json"
+    },
+    {
+      "name": "Minimax H3 FL2VA Prune",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/minimax_h3_fl2va_pruned_int8_convrot.json"
+    },
+    {
+      "name": "Minimax H3 REF2VA",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/minimax_h3_ref2va_int8_convrot.json"
+    },
+    {
+      "name": "Minimax H3 REF2VA Prune",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/minimax_h3_ref2va_pruned_int8_convrot.json"
+    }
+  ],
   "Others": [
     {
       "name": "Chroma-1 HD",
