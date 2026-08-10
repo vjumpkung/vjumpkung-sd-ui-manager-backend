@@ -10,6 +10,7 @@ RELOAD = "true" == os.getenv("RELOAD")
 HOST = os.getenv("HOST") or "127.0.0.1"  # host for running app
 
 UI_TYPE = os.getenv("UI_TYPE") or "COMFY"  # COMFY, FORGE, INVOKEAI
+COMFYUI_PATH = os.getenv("COMFYUI_PATH") or "/notebooks/ComfyUI"
 RESOURCE_PATH = os.getenv("RESOURCE_PATH") or "./my-runpod-volume/models"
 LOG_PATH = os.getenv("LOG_PATH") or "./backend.log"
 PROGRAM_LOG = os.getenv("PROGRAM_LOG") or "./program.log"

@@ -18,6 +18,11 @@ from history_manager import downloadHistory
 from worker.check_process import programStatus
 from worker.download import download_multiple, queue_download
 from worker.export_zip import _create_zip_file
+from worker.install_custom_node import (
+    CustomNodeAlreadyInstalledError,
+    CustomNodeInstallError,
+    install_custom_node,
+)
 from worker.program_logs import programLog
 from worker.restart_program import restart_program
 
@@ -46,6 +51,17 @@ class ImportModel(BaseModel):
     name: str
     url: HttpUrl
     type: str
+
+
+class CustomNodeInstallRequest(BaseModel):
+    url: HttpUrl
+
+
+class CustomNodeInstallResponse(BaseModel):
+    status: Literal["installed"]
+    message: str
+    repository: str
+    dependency_method: Literal["install.py", "requirements.txt", "none"]
 
 
 router = APIRouter(prefix="/api")
@@ -213,6 +229,31 @@ def get_program_log():
 @router.post("/restart", status_code=204)
 async def restart():
     await restart_program()
+
+
+@router.post("/install_custom_node", response_model=CustomNodeInstallResponse)
+async def install_comfyui_custom_node(
+    request: CustomNodeInstallRequest,
+) -> CustomNodeInstallResponse:
+    if UI_TYPE != "COMFY":
+        raise HTTPException(
+            status_code=400,
+            detail="Custom nodes can only be installed when UI_TYPE is COMFY.",
+        )
+
+    try:
+        result = await install_custom_node(str(request.url))
+    except CustomNodeAlreadyInstalledError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    except CustomNodeInstallError as error:
+        raise HTTPException(status_code=500, detail=str(error)) from error
+
+    return CustomNodeInstallResponse(
+        status="installed",
+        message=f"Installed {result.repository} and restarted ComfyUI.",
+        repository=result.repository,
+        dependency_method=result.dependency_method,
+    )
 
 
 @router.get("/download-images")

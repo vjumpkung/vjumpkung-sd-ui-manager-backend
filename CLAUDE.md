@@ -23,6 +23,7 @@ cp .env.example .env
 
 Key `.env` variables:
 - `UI_TYPE`: `COMFY` | `FORGE` | `INVOKEAI` | `ZIMAGE`
+- `COMFYUI_PATH`: ComfyUI installation directory (defaults to `/notebooks/ComfyUI`)
 - `PORT` / `HOST`: Server bind address
 - `RESOURCE_PATH`: Where model files are stored
 - `OUTPUT_PATH`: Where generated images are stored
@@ -77,6 +78,7 @@ Key `.env` variables:
 | POST | `/api/import_models` | Queue multiple model downloads |
 | POST | `/api/download_selected` | Queue selected pack models |
 | POST | `/api/restart` | Trigger UI process restart |
+| POST | `/api/install_custom_node` | Clone and install a ComfyUI custom node, then restart ComfyUI |
 | WS | `/ws/{client_id}` | WebSocket for real-time events |
 
 ## Skills
