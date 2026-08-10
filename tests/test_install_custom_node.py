@@ -67,6 +67,11 @@ class InstallCustomNodeTests(unittest.IsolatedAsyncioTestCase):
                     "restart_program",
                     new=AsyncMock(),
                 ) as restart,
+                patch.object(
+                    install_custom_node,
+                    "_is_comfyui_running",
+                    new=AsyncMock(return_value=True),
+                ),
             ):
                 result = await install_custom_node.install_custom_node(
                     "https://github.com/owner/example-node.git"
@@ -104,6 +109,11 @@ class InstallCustomNodeTests(unittest.IsolatedAsyncioTestCase):
                     "restart_program",
                     new=AsyncMock(),
                 ) as restart,
+                patch.object(
+                    install_custom_node,
+                    "_is_comfyui_running",
+                    new=AsyncMock(return_value=True),
+                ),
             ):
                 result = await install_custom_node.install_custom_node(
                     "https://github.com/owner/requirements-node"
@@ -112,6 +122,39 @@ class InstallCustomNodeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.dependency_method, "requirements.txt")
         self.assertEqual(commands[1][:4], ("uv", "pip", "install", "-r"))
         restart.assert_awaited_once()
+
+    async def test_skips_restart_when_comfyui_is_not_running(self) -> None:
+        async def create_process(*command, **kwargs):
+            if command[:2] == ("git", "clone"):
+                Path(command[-1]).mkdir()
+            return FakeProcess()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with (
+                patch.object(install_custom_node, "COMFYUI_PATH", temp_dir),
+                patch.object(
+                    install_custom_node.asyncio,
+                    "create_subprocess_exec",
+                    side_effect=create_process,
+                ),
+                patch.object(
+                    install_custom_node,
+                    "restart_program",
+                    new=AsyncMock(),
+                ) as restart,
+                patch.object(
+                    install_custom_node,
+                    "_is_comfyui_running",
+                    new=AsyncMock(return_value=False),
+                ) as is_running,
+            ):
+                result = await install_custom_node.install_custom_node(
+                    "https://github.com/owner/stopped-comfy-node"
+                )
+
+        self.assertEqual(result.repository, "stopped-comfy-node")
+        is_running.assert_awaited_once_with()
+        restart.assert_not_awaited()
 
     async def test_does_not_restart_after_failed_install(self) -> None:
         process_count = 0

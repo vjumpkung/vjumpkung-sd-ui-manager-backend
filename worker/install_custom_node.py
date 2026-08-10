@@ -8,6 +8,7 @@ from urllib.parse import unquote, urlsplit
 
 from config.load_config import COMFYUI_PATH
 from log_manager import log
+from worker.check_process import UIPort
 from worker.restart_program import restart_program
 
 
@@ -27,6 +28,19 @@ class CustomNodeInstallResult:
 
 _install_lock = asyncio.Lock()
 _repository_name_pattern = re.compile(r"^[A-Za-z0-9._-]+$")
+
+
+async def _is_comfyui_running(
+    host: str = "127.0.0.1", port: int = UIPort.COMFY.value
+) -> bool:
+    try:
+        _, writer = await asyncio.open_connection(host, port)
+    except (ConnectionRefusedError, OSError):
+        return False
+
+    writer.close()
+    await writer.wait_closed()
+    return True
 
 
 def _repository_name(repository_url: str) -> str:
@@ -149,7 +163,11 @@ async def install_custom_node(repository_url: str) -> CustomNodeInstallResult:
                 )
                 dependency_method = "requirements.txt"
 
-        await restart_program()
+        if await _is_comfyui_running():
+            await restart_program()
+        else:
+            log.debug("ComfyUI is not running; skipping restart.")
+
         return CustomNodeInstallResult(
             repository=repository_name,
             dependency_method=dependency_method,
