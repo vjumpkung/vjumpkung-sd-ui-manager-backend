@@ -247,6 +247,10 @@
     {
       "name": "WAN2.1 SCAIL 2 int8 ConvRot",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/scail_2_int8_convrot.json"
+    },
+    {
+      "name": "WAN Animate 2",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan_animate_2.json"
     }
   ],
   "LTX2": [
