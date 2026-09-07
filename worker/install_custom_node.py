@@ -152,16 +152,17 @@ async def install_custom_node(repository_url: str) -> CustomNodeInstallResult:
                 [sys.executable, install_script.name], install_script.parent
             )
             dependency_method = "install.py"
-        else:
-            requirements_file = await asyncio.to_thread(
-                _find_repository_file, repository_path, "requirements.txt"
+
+        # always install with requirements.txt
+        requirements_file = await asyncio.to_thread(
+            _find_repository_file, repository_path, "requirements.txt"
+        )
+        if requirements_file is not None:
+            await _run_command(
+                ["uv", "pip", "install", "-r", str(requirements_file)],
+                requirements_file.parent,
             )
-            if requirements_file is not None:
-                await _run_command(
-                    ["uv", "pip", "install", "-r", str(requirements_file)],
-                    requirements_file.parent,
-                )
-                dependency_method = "requirements.txt"
+            dependency_method = "requirements.txt"
 
         if await _is_comfyui_running():
             await restart_program()
