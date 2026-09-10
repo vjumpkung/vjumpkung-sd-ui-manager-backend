@@ -78,7 +78,7 @@ Key `.env` variables:
 | POST | `/api/import_models` | Queue multiple model downloads |
 | POST | `/api/download_selected` | Queue selected pack models |
 | POST | `/api/restart` | Trigger UI process restart |
-| POST | `/api/install_custom_node` | Clone and install a ComfyUI custom node, then restart ComfyUI |
+| POST | `/api/install_custom_node` | Install one or more ComfyUI custom nodes, then restart ComfyUI once |
 | WS | `/ws/{client_id}` | WebSocket for real-time events |
 
 ## Skills

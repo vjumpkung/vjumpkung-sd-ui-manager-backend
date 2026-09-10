@@ -565,6 +565,10 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/pixal_3d.json"
     },
     {
+      "name": "Tencent Pixal3D Multi View",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/pixal_3d_multiview.json"
+    },
+    {
       "name": "SenseNova U1.5 8B MoT",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/sensenova.json"
     }

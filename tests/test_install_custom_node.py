@@ -40,7 +40,7 @@ class RepositoryNameTests(unittest.TestCase):
 
 
 class InstallCustomNodeTests(unittest.IsolatedAsyncioTestCase):
-    async def test_runs_install_script_and_restarts(self) -> None:
+    async def test_runs_install_script_requirements_and_restarts(self) -> None:
         commands: list[tuple[tuple[str, ...], str]] = []
 
         async def create_process(*command, **kwargs):
@@ -78,9 +78,10 @@ class InstallCustomNodeTests(unittest.IsolatedAsyncioTestCase):
                 )
 
         self.assertEqual(result.repository, "example-node")
-        self.assertEqual(result.dependency_method, "install.py")
+        self.assertEqual(result.dependency_method, "requirements.txt")
         self.assertEqual(commands[1][0], (sys.executable, "install.py"))
-        self.assertEqual(len(commands), 2)
+        self.assertEqual(commands[2][0][:4], ("uv", "pip", "install", "-r"))
+        self.assertEqual(len(commands), 3)
         restart.assert_awaited_once()
 
     async def test_uses_uv_requirements_when_install_script_is_absent(self) -> None:
@@ -155,6 +156,55 @@ class InstallCustomNodeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.repository, "stopped-comfy-node")
         is_running.assert_awaited_once_with()
         restart.assert_not_awaited()
+
+    async def test_batch_continues_after_skipped_and_failed_nodes(self) -> None:
+        async def create_process(*command, **kwargs):
+            if command[:2] == ("git", "clone"):
+                repository_path = Path(command[-1])
+                if repository_path.name == "failing-node":
+                    return FakeProcess("clone failed", return_code=1)
+                repository_path.mkdir()
+            return FakeProcess()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            custom_nodes_path = Path(temp_dir) / "custom_nodes"
+            custom_nodes_path.mkdir()
+            custom_nodes_path.joinpath("existing-node").mkdir()
+
+            with (
+                patch.object(install_custom_node, "COMFYUI_PATH", temp_dir),
+                patch.object(
+                    install_custom_node.asyncio,
+                    "create_subprocess_exec",
+                    side_effect=create_process,
+                ),
+                patch.object(
+                    install_custom_node,
+                    "restart_program",
+                    new=AsyncMock(),
+                ) as restart,
+                patch.object(
+                    install_custom_node,
+                    "_is_comfyui_running",
+                    new=AsyncMock(return_value=True),
+                ) as is_running,
+            ):
+                result = await install_custom_node.install_custom_nodes(
+                    [
+                        "https://github.com/owner/first-node.git",
+                        "https://github.com/owner/existing-node.git",
+                        "https://github.com/owner/failing-node.git",
+                        "https://github.com/owner/last-node.git",
+                    ]
+                )
+
+        self.assertEqual(
+            [item.status for item in result.results],
+            ["installed", "already_installed", "failed", "installed"],
+        )
+        self.assertTrue(result.restarted)
+        is_running.assert_awaited_once_with()
+        restart.assert_awaited_once_with()
 
     async def test_does_not_restart_after_failed_install(self) -> None:
         process_count = 0

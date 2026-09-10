@@ -24,6 +24,22 @@ class CustomNodeAlreadyInstalledError(CustomNodeInstallError):
 class CustomNodeInstallResult:
     repository: str
     dependency_method: str
+    restarted: bool = False
+
+
+@dataclass(frozen=True)
+class CustomNodeBatchItemResult:
+    url: str
+    repository: str | None
+    status: str
+    dependency_method: str | None
+    message: str
+
+
+@dataclass(frozen=True)
+class CustomNodeBatchInstallResult:
+    results: tuple[CustomNodeBatchItemResult, ...]
+    restarted: bool
 
 
 _install_lock = asyncio.Lock()
@@ -122,54 +138,119 @@ async def _run_command(command: list[str], cwd: Path) -> None:
         raise CustomNodeInstallError(message)
 
 
-async def install_custom_node(repository_url: str) -> CustomNodeInstallResult:
+async def _install_custom_node(repository_url: str) -> CustomNodeInstallResult:
     repository_name = _repository_name(repository_url)
+    custom_nodes_path = (Path(COMFYUI_PATH).expanduser() / "custom_nodes").resolve()
+    await asyncio.to_thread(custom_nodes_path.mkdir, parents=True, exist_ok=True)
+
+    repository_path = (custom_nodes_path / repository_name).resolve()
+    if repository_path.parent != custom_nodes_path:
+        raise CustomNodeInstallError("Invalid custom node destination.")
+    if await asyncio.to_thread(repository_path.exists):
+        raise CustomNodeAlreadyInstalledError(
+            f"Custom node '{repository_name}' is already installed."
+        )
+
+    await _run_command(
+        ["git", "clone", "--", repository_url, str(repository_path)],
+        custom_nodes_path,
+    )
+
+    install_script = await asyncio.to_thread(
+        _find_repository_file, repository_path, "install.py"
+    )
+    dependency_method = "none"
+
+    if install_script is not None:
+        await _run_command([sys.executable, install_script.name], install_script.parent)
+        dependency_method = "install.py"
+
+    requirements_file = await asyncio.to_thread(
+        _find_repository_file, repository_path, "requirements.txt"
+    )
+    if requirements_file is not None:
+        await _run_command(
+            ["uv", "pip", "install", "-r", str(requirements_file)],
+            requirements_file.parent,
+        )
+        dependency_method = "requirements.txt"
+
+    return CustomNodeInstallResult(
+        repository=repository_name,
+        dependency_method=dependency_method,
+    )
+
+
+async def _restart_comfyui_if_running() -> bool:
+    if not await _is_comfyui_running():
+        log.debug("ComfyUI is not running; skipping restart.")
+        return False
+
+    await restart_program()
+    return True
+
+
+async def install_custom_node(repository_url: str) -> CustomNodeInstallResult:
+    async with _install_lock:
+        result = await _install_custom_node(repository_url)
+        restarted = await _restart_comfyui_if_running()
+
+    return CustomNodeInstallResult(
+        repository=result.repository,
+        dependency_method=result.dependency_method,
+        restarted=restarted,
+    )
+
+
+async def install_custom_nodes(
+    repository_urls: list[str],
+) -> CustomNodeBatchInstallResult:
+    results: list[CustomNodeBatchItemResult] = []
 
     async with _install_lock:
-        custom_nodes_path = (Path(COMFYUI_PATH).expanduser() / "custom_nodes").resolve()
-        await asyncio.to_thread(custom_nodes_path.mkdir, parents=True, exist_ok=True)
+        for repository_url in repository_urls:
+            try:
+                result = await _install_custom_node(repository_url)
+            except CustomNodeAlreadyInstalledError as error:
+                results.append(
+                    CustomNodeBatchItemResult(
+                        url=repository_url,
+                        repository=_repository_name(repository_url),
+                        status="already_installed",
+                        dependency_method=None,
+                        message=str(error),
+                    )
+                )
+            except CustomNodeInstallError as error:
+                try:
+                    repository = _repository_name(repository_url)
+                except CustomNodeInstallError:
+                    repository = None
 
-        repository_path = (custom_nodes_path / repository_name).resolve()
-        if repository_path.parent != custom_nodes_path:
-            raise CustomNodeInstallError("Invalid custom node destination.")
-        if await asyncio.to_thread(repository_path.exists):
-            raise CustomNodeAlreadyInstalledError(
-                f"Custom node '{repository_name}' is already installed."
-            )
+                results.append(
+                    CustomNodeBatchItemResult(
+                        url=repository_url,
+                        repository=repository,
+                        status="failed",
+                        dependency_method=None,
+                        message=str(error),
+                    )
+                )
+            else:
+                results.append(
+                    CustomNodeBatchItemResult(
+                        url=repository_url,
+                        repository=result.repository,
+                        status="installed",
+                        dependency_method=result.dependency_method,
+                        message=f"Installed {result.repository}.",
+                    )
+                )
 
-        await _run_command(
-            ["git", "clone", "--", repository_url, str(repository_path)],
-            custom_nodes_path,
-        )
+        installed_any = any(result.status == "installed" for result in results)
+        restarted = installed_any and await _restart_comfyui_if_running()
 
-        install_script = await asyncio.to_thread(
-            _find_repository_file, repository_path, "install.py"
-        )
-        dependency_method = "none"
-
-        if install_script is not None:
-            await _run_command(
-                [sys.executable, install_script.name], install_script.parent
-            )
-            dependency_method = "install.py"
-
-        # always install with requirements.txt
-        requirements_file = await asyncio.to_thread(
-            _find_repository_file, repository_path, "requirements.txt"
-        )
-        if requirements_file is not None:
-            await _run_command(
-                ["uv", "pip", "install", "-r", str(requirements_file)],
-                requirements_file.parent,
-            )
-            dependency_method = "requirements.txt"
-
-        if await _is_comfyui_running():
-            await restart_program()
-        else:
-            log.debug("ComfyUI is not running; skipping restart.")
-
-        return CustomNodeInstallResult(
-            repository=repository_name,
-            dependency_method=dependency_method,
-        )
+    return CustomNodeBatchInstallResult(
+        results=tuple(results),
+        restarted=restarted,
+    )

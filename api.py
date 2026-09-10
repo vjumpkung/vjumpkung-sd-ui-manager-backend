@@ -5,12 +5,12 @@ import os
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import List, Literal, Optional
+from typing import Annotated, List, Literal, Optional
 
 import aiofiles
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, model_validator
 
 from config.load_config import OUTPUT_PATH, RUNPOD_POD_ID, UI_TYPE
 from env_manager import envs
@@ -19,9 +19,7 @@ from worker.check_process import programStatus
 from worker.download import download_multiple, queue_download
 from worker.export_zip import _create_zip_file
 from worker.install_custom_node import (
-    CustomNodeAlreadyInstalledError,
-    CustomNodeInstallError,
-    install_custom_node,
+    install_custom_nodes,
 )
 from worker.program_logs import programLog
 from worker.restart_program import restart_program
@@ -54,14 +52,35 @@ class ImportModel(BaseModel):
 
 
 class CustomNodeInstallRequest(BaseModel):
-    url: HttpUrl
+    urls: Annotated[list[HttpUrl] | None, Field(min_length=1, max_length=100)] = None
+    url: HttpUrl | None = None
+
+    @model_validator(mode="after")
+    def validate_repository_urls(self) -> "CustomNodeInstallRequest":
+        if self.urls is None and self.url is None:
+            raise ValueError("Provide at least one custom node URL.")
+        if self.urls is not None and self.url is not None:
+            raise ValueError("Provide either 'urls' or 'url', not both.")
+        return self
+
+    def repository_urls(self) -> list[str]:
+        urls = self.urls if self.urls is not None else [self.url]
+        return [str(url) for url in urls if url is not None]
+
+
+class CustomNodeInstallItemResponse(BaseModel):
+    url: str
+    repository: str | None
+    status: Literal["installed", "already_installed", "failed"]
+    dependency_method: Literal["install.py", "requirements.txt", "none"] | None
+    message: str
 
 
 class CustomNodeInstallResponse(BaseModel):
-    status: Literal["installed"]
+    status: Literal["completed", "partial", "failed"]
     message: str
-    repository: str
-    dependency_method: Literal["install.py", "requirements.txt", "none"]
+    restarted: bool
+    results: list[CustomNodeInstallItemResponse]
 
 
 router = APIRouter(prefix="/api")
@@ -241,18 +260,43 @@ async def install_comfyui_custom_node(
             detail="Custom nodes can only be installed when UI_TYPE is COMFY.",
         )
 
-    try:
-        result = await install_custom_node(str(request.url))
-    except CustomNodeAlreadyInstalledError as error:
-        raise HTTPException(status_code=409, detail=str(error)) from error
-    except CustomNodeInstallError as error:
-        raise HTTPException(status_code=500, detail=str(error)) from error
+    result = await install_custom_nodes(request.repository_urls())
+    installed_count = sum(item.status == "installed" for item in result.results)
+    already_installed_count = sum(
+        item.status == "already_installed" for item in result.results
+    )
+    failed_count = sum(item.status == "failed" for item in result.results)
+
+    if failed_count == len(result.results):
+        status = "failed"
+    elif failed_count:
+        status = "partial"
+    else:
+        status = "completed"
+
+    message = (
+        f"Processed {len(result.results)} custom node(s): "
+        f"{installed_count} installed, "
+        f"{already_installed_count} already installed, "
+        f"{failed_count} failed."
+    )
+    if result.restarted:
+        message = f"{message} ComfyUI was restarted."
 
     return CustomNodeInstallResponse(
-        status="installed",
-        message=f"Installed {result.repository} and restarted ComfyUI.",
-        repository=result.repository,
-        dependency_method=result.dependency_method,
+        status=status,
+        message=message,
+        restarted=result.restarted,
+        results=[
+            CustomNodeInstallItemResponse(
+                url=item.url,
+                repository=item.repository,
+                status=item.status,
+                dependency_method=item.dependency_method,
+                message=item.message,
+            )
+            for item in result.results
+        ],
     )
 
 
