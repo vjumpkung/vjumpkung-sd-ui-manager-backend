@@ -77,9 +77,7 @@ class InstallCustomNodeApiTests(unittest.IsolatedAsyncioTestCase):
                 )
             )
 
-        install.assert_awaited_once_with(
-            ["https://github.com/owner/custom-node.git"]
-        )
+        install.assert_awaited_once_with(["https://github.com/owner/custom-node.git"])
 
 
 if __name__ == "__main__":

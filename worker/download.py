@@ -1,16 +1,14 @@
 import asyncio
 import hashlib
 import os
-import re
 import shutil
+import subprocess
 import sys
-import tempfile
+import traceback
 import urllib.parse as urlparse
-from email.message import Message
 from typing import Literal
 
 import httpx
-from curl_cffi.requests import AsyncSession
 from pydantic import BaseModel, ConfigDict
 
 from config.load_config import RESOURCE_PATH, UI_TYPE
@@ -18,17 +16,22 @@ from env_manager import envs
 from event_handler import manager
 from history_manager import downloadHistory
 from log_manager import log
-from utils.checksum import compute_sha256, fetch_civitai_sha256, fetch_hf_sha256
+from utils.checksum import compute_sha256, fetch_hf_sha256
 from utils.enums import DownloadStatus
 from utils.ws_messages import DownloadData, DownloadMessage
 
 PYTHON = sys.executable
+CIVITAI_DOWNLOAD_SCRIPT = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "scripts", "civitai_download.py")
+)
 
 semaphore = asyncio.Semaphore(5)
 preflight_semaphore = asyncio.Semaphore(5)
 active_download_tasks: set[asyncio.Task[bool]] = set()
 
-CIVITAI_HOSTS = frozenset({"civitai.com", "civitai.red"})
+CIVITAI_HOSTS = frozenset({"civitai.com", "civitai.green", "civitai.red"})
+CIVITAI_REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
+CIVITAI_DISK_RESERVE_BYTES = 64 * 1024 * 1024
 HUGGINGFACE_HOSTS = frozenset({"huggingface.co"})
 
 forge_types_mapping = {
@@ -52,6 +55,8 @@ class DownloadPreparation(BaseModel):
     filename: str | None
     destination: str
     file_matches_sha256: bool
+    expected_size_bytes: int | None
+    civitai_file_id: str | None
 
 
 class QueueDownloadResult(BaseModel):
@@ -70,6 +75,16 @@ class HuggingFaceDownloadTarget(BaseModel):
     filepath: str
 
 
+class CivitaiDownloadTarget(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    version_id: str
+    file_id: str
+    filename: str
+    expected_sha256: str
+    expected_size_bytes: int
+
+
 def _get_download_destination(model_type: str) -> tuple[str, str]:
     destination_type = model_type
 
@@ -86,26 +101,149 @@ def _get_civitai_headers() -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"} if token else {}
 
 
+def _get_query_value(query: dict[str, list[str]], name: str) -> str | None:
+    for key, values in query.items():
+        if key.casefold() == name.casefold() and values:
+            return values[0]
+    return None
+
+
+def _get_civitai_version_id(url: str) -> str:
+    path_parts = urlparse.urlparse(url).path.strip("/").split("/")
+    try:
+        model_index = path_parts.index("models")
+        version_id = path_parts[model_index + 1]
+    except (ValueError, IndexError) as exc:
+        raise RuntimeError("Invalid CivitAI model download URL") from exc
+
+    if not version_id.isdigit() or int(version_id) <= 0:
+        raise RuntimeError("Invalid CivitAI model version ID")
+    return version_id
+
+
+def _validated_download_filename(value: object) -> str:
+    filename = os.path.basename(str(value or "").replace("\\", "/")).strip()
+    if (
+        filename in {"", ".", ".."}
+        or filename.endswith(".")
+        or any(ord(character) < 32 for character in filename)
+        or any(character in filename for character in '<>:"/\\|?*')
+        or len(filename.encode("utf-8")) > 240
+    ):
+        raise RuntimeError("CivitAI returned an unsafe filename")
+    return filename
+
+
+def _select_civitai_file(
+    version_id: str, url: str, files: object
+) -> CivitaiDownloadTarget:
+    if not isinstance(files, list) or not files:
+        raise RuntimeError(f"CivitAI version {version_id} has no downloadable files")
+
+    query = urlparse.parse_qs(urlparse.urlparse(url).query)
+    requested_file_id = _get_query_value(query, "fileId")
+    filters = {
+        "type": _get_query_value(query, "type"),
+        "format": _get_query_value(query, "format"),
+        "size": _get_query_value(query, "size"),
+        "fp": _get_query_value(query, "fp"),
+    }
+
+    candidates: list[dict] = []
+    for file_data in files:
+        if not isinstance(file_data, dict):
+            continue
+        file_id = str(file_data.get("id") or "")
+        if requested_file_id and file_id != requested_file_id:
+            continue
+
+        metadata = file_data.get("metadata") or {}
+        actual_values = {
+            "type": file_data.get("type"),
+            "format": metadata.get("format"),
+            "size": metadata.get("size"),
+            "fp": metadata.get("fp"),
+        }
+        if requested_file_id or all(
+            requested is None
+            or str(actual_values[key] or "").casefold() == requested.casefold()
+            for key, requested in filters.items()
+        ):
+            candidates.append(file_data)
+
+    if not candidates:
+        requested = f"file {requested_file_id}" if requested_file_id else "filters"
+        raise RuntimeError(
+            f"CivitAI version {version_id} has no file matching the requested {requested}"
+        )
+
+    selected = next(
+        (file_data for file_data in candidates if file_data.get("primary")),
+        candidates[0],
+    )
+    file_id = str(selected.get("id") or "")
+    sha256 = str((selected.get("hashes") or {}).get("SHA256") or "").lower()
+    if not file_id.isdigit() or int(file_id) <= 0:
+        raise RuntimeError("CivitAI returned an invalid file ID")
+    if len(sha256) != 64 or any(
+        character not in "0123456789abcdef" for character in sha256
+    ):
+        raise RuntimeError(f"CivitAI file {file_id} has no valid SHA-256")
+
+    try:
+        expected_size_bytes = round(float(selected.get("sizeKB")) * 1024)
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError(f"CivitAI file {file_id} has no valid size") from exc
+    if expected_size_bytes <= 0:
+        raise RuntimeError(f"CivitAI file {file_id} has no valid size")
+
+    return CivitaiDownloadTarget(
+        version_id=version_id,
+        file_id=file_id,
+        filename=_validated_download_filename(selected.get("name")),
+        expected_sha256=sha256,
+        expected_size_bytes=expected_size_bytes,
+    )
+
+
+async def _fetch_civitai_target(url: str) -> CivitaiDownloadTarget:
+    token = getattr(envs, "CIVITAI_TOKEN", "")
+    if not token:
+        raise RuntimeError(
+            "CIVITAI_TOKEN is required; configure it before downloading CivitAI models"
+        )
+
+    version_id = _get_civitai_version_id(url)
+    metadata_url = f"https://civitai.com/api/v1/model-versions/{version_id}"
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                metadata_url,
+                headers=_get_civitai_headers(),
+                follow_redirects=True,
+                timeout=15,
+            )
+    except httpx.HTTPError as exc:
+        raise RuntimeError("Could not fetch CivitAI model metadata") from exc
+
+    if response.status_code in {401, 403}:
+        raise RuntimeError("CivitAI API token is invalid or lacks access to this model")
+    if response.status_code != 200:
+        raise RuntimeError(
+            f"CivitAI metadata request failed with HTTP {response.status_code}"
+        )
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        raise RuntimeError("CivitAI returned invalid model metadata") from exc
+    if not isinstance(payload, dict):
+        raise TypeError("CivitAI returned invalid model metadata")
+    return _select_civitai_file(version_id, url, payload.get("files"))
+
+
 async def _fetch_expected_sha256(url: str) -> str | None:
     parsed_url = urlparse.urlparse(url)
     hostname = parsed_url.hostname or ""
-
-    if hostname in CIVITAI_HOSTS:
-        path_parts = parsed_url.path.split("/")
-        if "models" not in path_parts:
-            return None
-
-        model_version_index = path_parts.index("models") + 1
-        if model_version_index >= len(path_parts):
-            return None
-
-        model_version_id = path_parts[model_version_index]
-        if not model_version_id.isdigit():
-            return None
-
-        return await fetch_civitai_sha256(
-            model_version_id, getattr(envs, "CIVITAI_TOKEN", None)
-        )
 
     if hostname in HUGGINGFACE_HOSTS:
         path_parts = parsed_url.path.strip("/").split("/")
@@ -118,28 +256,6 @@ async def _fetch_expected_sha256(url: str) -> str | None:
             )
 
     return None
-
-
-async def _get_http_filename(
-    url: str, headers: dict[str, str] | None = None
-) -> str | None:
-    try:
-        async with AsyncSession() as session:
-            response = await session.head(
-                url,
-                headers=headers or {},
-                allow_redirects=True,
-            )
-            try:
-                if response.status_code >= 400:
-                    return None
-                return _extract_filename_from_cd(
-                    response.headers.get("content-disposition", "")
-                )
-            finally:
-                await response.aclose()
-    except Exception:
-        return None
 
 
 async def _existing_file_matches_sha256(
@@ -179,18 +295,20 @@ async def prepare_download(
     destination_type, destination = _get_download_destination(model_type)
     await asyncio.to_thread(os.makedirs, destination, exist_ok=True)
 
-    expected_sha256 = await _fetch_expected_sha256(url)
+    parsed_url = urlparse.urlparse(url)
+    hostname = parsed_url.hostname or ""
+    civitai_target = None
+    if hostname in CIVITAI_HOSTS:
+        civitai_target = await _fetch_civitai_target(url)
+        expected_sha256 = civitai_target.expected_sha256
+    else:
+        expected_sha256 = await _fetch_expected_sha256(url)
     if expected_sha256:
         expected_sha256 = expected_sha256.lower()
     cache_key = expected_sha256 or hashlib.sha256(url.encode("utf-8")).hexdigest()
 
-    parsed_url = urlparse.urlparse(url)
-    hostname = parsed_url.hostname or ""
-    filename = None
-
-    if expected_sha256 and hostname in CIVITAI_HOSTS:
-        filename = await _get_http_filename(url, _get_civitai_headers())
-    elif expected_sha256 and hostname in HUGGINGFACE_HOSTS:
+    filename = civitai_target.filename if civitai_target else None
+    if expected_sha256 and hostname in HUGGINGFACE_HOSTS:
         filename = _get_huggingface_filename(
             url, name, destination_type, cache_key, from_model_pack
         )
@@ -205,6 +323,10 @@ async def prepare_download(
         filename=filename,
         destination=destination,
         file_matches_sha256=file_matches_sha256,
+        expected_size_bytes=(
+            civitai_target.expected_size_bytes if civitai_target else None
+        ),
+        civitai_file_id=civitai_target.file_id if civitai_target else None,
     )
 
 
@@ -244,6 +366,8 @@ def _start_download(
             from_model_pack,
             preparation.expected_sha256,
             preparation.filename,
+            preparation.expected_size_bytes,
+            preparation.civitai_file_id,
         )
     )
     active_download_tasks.add(task)
@@ -385,198 +509,231 @@ def _redact_command(command: list[str]) -> list[str]:
     ]
 
 
-def _extract_filename_from_cd(cd: str) -> str | None:
-    if not cd:
-        return None
-
-    message = Message()
-    message["Content-Disposition"] = cd
-    filename = message.get_filename()
-    if not filename:
-        return None
-
-    filename = os.path.basename(filename.replace("\\", "/")).strip()
-    return filename if filename not in {"", ".", ".."} else None
+def _build_civitai_download_url(url: str, file_id: str, token: str) -> str:
+    parsed = urlparse.urlparse(url)
+    query = [
+        (key, value)
+        for key, value in urlparse.parse_qsl(parsed.query, keep_blank_values=True)
+        if key.casefold() not in {"fileid", "token"}
+    ]
+    query.extend((("fileId", file_id), ("token", token)))
+    return urlparse.urlunparse(parsed._replace(query=urlparse.urlencode(query)))
 
 
-def _extract_filename_from_response_headers(headers: str) -> str | None:
-    content_dispositions = re.findall(
-        r"^content-disposition:\s*(.+?)\r?$",
-        headers,
-        re.IGNORECASE | re.MULTILINE,
-    )
-    for content_disposition in reversed(content_dispositions):
-        filename = _extract_filename_from_cd(content_disposition)
-        if filename:
-            return filename
-    return None
+async def _resolve_civitai_download_url(url: str, file_id: str) -> str:
+    token = getattr(envs, "CIVITAI_TOKEN", "")
+    if not token:
+        raise RuntimeError(
+            "CIVITAI_TOKEN is required; configure it before downloading CivitAI models"
+        )
+
+    download_url = _build_civitai_download_url(url, file_id, token)
+    try:
+        async with (
+            httpx.AsyncClient() as client,
+            client.stream(
+                "GET",
+                download_url,
+                follow_redirects=False,
+                timeout=30,
+            ) as response,
+        ):
+            if response.status_code in {401, 403}:
+                raise RuntimeError(
+                    "CivitAI API token is invalid or lacks access to this model"
+                )
+            if response.status_code not in CIVITAI_REDIRECT_STATUSES:
+                raise RuntimeError(
+                    "CivitAI download endpoint returned "
+                    f"HTTP {response.status_code}; expected a signed redirect"
+                )
+            location = response.headers.get("location")
+    except httpx.HTTPError as exc:
+        raise RuntimeError("Could not resolve the CivitAI download URL") from exc
+
+    if not location:
+        raise RuntimeError("CivitAI download redirect did not include a location")
+    signed_url = urlparse.urljoin(download_url, location)
+    parsed_signed_url = urlparse.urlparse(signed_url)
+    if (
+        parsed_signed_url.scheme != "https"
+        or not parsed_signed_url.hostname
+        or any(character in signed_url for character in ("\r", "\n", "\x00"))
+    ):
+        raise RuntimeError("CivitAI returned an invalid download redirect")
+    if any(
+        value == token
+        for values in urlparse.parse_qs(parsed_signed_url.query).values()
+        for value in values
+    ):
+        raise RuntimeError("CivitAI token was exposed in the download redirect")
+    return signed_url
 
 
-def _read_response_filename(headers_path: str) -> str | None:
-    with open(headers_path, encoding="latin-1") as headers_file:
-        return _extract_filename_from_response_headers(headers_file.read())
+def _build_civitai_helper_command(
+    destination: str, staging_filename: str, expected_sha256: str
+) -> list[str]:
+    return [
+        PYTHON,
+        CIVITAI_DOWNLOAD_SCRIPT,
+        "--destination",
+        destination,
+        "--output",
+        staging_filename,
+        "--sha256",
+        expected_sha256,
+    ]
 
 
-async def _download_http(
+async def _civitai_file_matches(
+    path: str, expected_size_bytes: int, expected_sha256: str
+) -> bool:
+    if not await asyncio.to_thread(os.path.isfile, path):
+        return False
+    if await asyncio.to_thread(os.path.getsize, path) != expected_size_bytes:
+        return False
+    return await compute_sha256(path) == expected_sha256
+
+
+async def _remove_file_if_present(path: str) -> None:
+    try:
+        await asyncio.to_thread(os.remove, path)
+    except FileNotFoundError:
+        pass
+
+
+async def _download_civitai(
     url: str,
     destination: str,
     filename: str | None = None,
-    headers: dict[str, str] | None = None,
     expected_sha256: str | None = None,
+    expected_size_bytes: int | None = None,
+    file_id: str | None = None,
 ) -> str:
-    # HEAD with default agent to check auth/response before downloading
-    content_length = 0
+    if not all((filename, expected_sha256, expected_size_bytes, file_id)):
+        target = await _fetch_civitai_target(url)
+        filename = target.filename
+        expected_sha256 = target.expected_sha256
+        expected_size_bytes = target.expected_size_bytes
+        file_id = target.file_id
+
+    assert filename is not None
+    assert expected_sha256 is not None
+    assert expected_size_bytes is not None
+    assert file_id is not None
+    filename = _validated_download_filename(filename)
+
+    staging_filename = f".civitai-{file_id}-{expected_sha256[:12]}.part"
+    staging_path = os.path.join(destination, staging_filename)
+    control_path = f"{staging_path}.aria2"
+    control_temp_path = f"{control_path}__temp"
+    final_path = os.path.join(destination, filename)
+
+    for path in (staging_path, control_path, control_temp_path):
+        if await asyncio.to_thread(os.path.islink, path):
+            raise RuntimeError("CivitAI staging path must not be a symbolic link")
+    await _remove_file_if_present(control_temp_path)
+
+    if await asyncio.to_thread(
+        os.path.isfile, staging_path
+    ) and not await asyncio.to_thread(os.path.exists, control_path):
+        if await _civitai_file_matches(
+            staging_path, expected_size_bytes, expected_sha256
+        ):
+            await asyncio.to_thread(os.replace, staging_path, final_path)
+            await _remove_file_if_present(control_path)
+            return filename
+        await _remove_file_if_present(staging_path)
+    elif await asyncio.to_thread(
+        os.path.exists, control_path
+    ) and not await asyncio.to_thread(os.path.isfile, staging_path):
+        await _remove_file_if_present(control_path)
+
+    current_size = (
+        await asyncio.to_thread(os.path.getsize, staging_path)
+        if await asyncio.to_thread(os.path.isfile, staging_path)
+        else 0
+    )
+    required_bytes = max(0, expected_size_bytes - current_size)
+    free_bytes = await asyncio.to_thread(lambda: shutil.disk_usage(destination).free)
+    required_with_reserve = required_bytes + CIVITAI_DISK_RESERVE_BYTES
+    if free_bytes < required_with_reserve:
+        raise RuntimeError(
+            f"Not enough disk space: need {required_with_reserve / 1024**3:.2f} GB, "
+            f"free {free_bytes / 1024**3:.2f} GB"
+        )
+
+    signed_url = await _resolve_civitai_download_url(url, file_id)
+    command = _build_civitai_helper_command(
+        destination, staging_filename, expected_sha256
+    )
+    subprocess_env = os.environ.copy()
+    for key in tuple(subprocess_env):
+        if key.casefold() == "civitai_token":
+            subprocess_env.pop(key)
+
+    log.info(f"executing command: {command}")
     try:
-        async with AsyncSession() as session:
-            head = await session.head(
-                url,
-                headers=headers or {},
-                allow_redirects=True,
-            )
-            try:
-                if head.status_code == 401:
-                    raise RuntimeError(
-                        "Authentication required (HTTP 401): API key/token is missing "
-                        "or invalid"
-                    )
-                if head.status_code == 403:
-                    raise RuntimeError(
-                        "Access denied (HTTP 403): you may need an API key or lack "
-                        "permission to download this file"
-                    )
-                if head.status_code < 400:
-                    content_type = head.headers.get("content-type", "")
-                    if "text/html" in content_type:
-                        raise RuntimeError(
-                            "Server returned an HTML page instead of a file — "
-                            "the URL may require an API key or the model may be behind a login/paywall"
-                        )
-                    content_length = int(head.headers.get("content-length", 0))
-                    if not filename:
-                        filename = _extract_filename_from_cd(
-                            head.headers.get("content-disposition", "")
-                        )
-            finally:
-                await head.aclose()
-    except RuntimeError:
+        proc = await asyncio.to_thread(
+            subprocess.Popen,
+            command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            env=subprocess_env,
+        )
+    except OSError as exc:
+        raise RuntimeError("Could not start the CivitAI download helper") from exc
+
+    try:
+        output, _ = await asyncio.to_thread(
+            proc.communicate,
+            input=f"{signed_url}\n".encode(),
+        )
+    except asyncio.CancelledError:
+        await asyncio.to_thread(proc.kill)
+        await asyncio.to_thread(proc.wait)
         raise
-    except Exception:
-        pass
+    except OSError as exc:
+        try:
+            await asyncio.to_thread(proc.kill)
+        except ProcessLookupError:
+            pass
+        await asyncio.to_thread(proc.wait)
+        raise RuntimeError("Could not communicate with the CivitAI helper") from exc
 
-    fallback_filename = os.path.basename(urlparse.urlparse(url).path)
-    filename = filename or fallback_filename
+    if proc.returncode != 0:
+        diagnostic = output.decode("utf-8", errors="replace").strip()
+        detail = f": {diagnostic}" if diagnostic else ""
+        raise RuntimeError(
+            f"CivitAI download helper exited with code {proc.returncode}{detail}"
+        )
+    if not await asyncio.to_thread(os.path.isfile, staging_path):
+        raise RuntimeError("aria2c finished without creating the expected model file")
 
-    if content_length > 0:
-        free = shutil.disk_usage(destination).free
-        if free < content_length:
-            raise RuntimeError(
-                f"Not enough disk space: need {content_length / 1024**3:.2f} GB, "
-                f"free {free / 1024**3:.2f} GB"
-            )
-
-    filepath = os.path.join(destination, filename) if filename else None
-
-    if filepath and os.path.exists(filepath):
-        if expected_sha256:
-            print(f"Verifying checksum for existing file: {filename}", flush=True)
-            local_sha256 = await compute_sha256(filepath)
-            if local_sha256 == expected_sha256.lower():
-                print(f"Checksum matches, skipping: {filename}", flush=True)
-                return filename
-            print(f"Checksum mismatch, re-downloading: {filename}", flush=True)
-        else:
-            existing_size = os.path.getsize(filepath)
-            if content_length == 0 or existing_size == content_length:
-                print(f"File already exists, skipping: {filepath}", flush=True)
-                return filename
-            print(
-                f"File exists but size mismatch (local {existing_size}, remote {content_length}), re-downloading",
-                flush=True,
-            )
-
-    with tempfile.TemporaryDirectory(
-        prefix=".download-",
-        dir=destination,
-    ) as download_temp_dir:
-        body_path = os.path.join(download_temp_dir, "body.part")
-        headers_path = os.path.join(download_temp_dir, "response.headers")
-        cmd = [
-            "curl",
-            "-L",
-            "--retry",
-            "3",
-            "--retry-delay",
-            "5",
-            "-D",
-            headers_path,
-            "-o",
-            body_path,
-            "-w",
-            "\n%{http_code}",
-        ]
-
-        for key, value in (headers or {}).items():
-            if key.lower() != "user-agent":
-                cmd.extend(["-H", f"{key}: {value}"])
-
-        cmd.append(url)
-
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
-            limit=1024 * 1024 * 100,
+    actual_size = await asyncio.to_thread(os.path.getsize, staging_path)
+    if actual_size != expected_size_bytes:
+        await _remove_file_if_present(staging_path)
+        await _remove_file_if_present(control_path)
+        await _remove_file_if_present(control_temp_path)
+        raise RuntimeError(
+            f"Downloaded file size mismatch: expected {expected_size_bytes}, "
+            f"got {actual_size}"
+        )
+    actual_sha256 = await compute_sha256(staging_path)
+    if actual_sha256 != expected_sha256:
+        await _remove_file_if_present(staging_path)
+        await _remove_file_if_present(control_path)
+        await _remove_file_if_present(control_temp_path)
+        raise RuntimeError(
+            "Downloaded file checksum mismatch: "
+            f"expected {expected_sha256}, got {actual_sha256}"
         )
 
-        assert proc.stdout is not None
-        last_line = ""
-        async for raw_line in proc.stdout:
-            line = raw_line.decode("utf-8").strip()
-            if line:
-                print(line, flush=True)
-                last_line = line
-
-        return_code = await proc.wait()
-        if return_code != 0:
-            raise RuntimeError(f"curl exited with code {return_code}")
-
-        http_code = last_line.strip()
-        if http_code.isdigit():
-            code = int(http_code)
-            if code == 401:
-                raise RuntimeError(
-                    "Authentication required (HTTP 401): API key/token is missing "
-                    "or invalid"
-                )
-            if code == 403:
-                raise RuntimeError(
-                    "Access denied (HTTP 403): you may need an API key or lack "
-                    "permission to download this file"
-                )
-            if code >= 400:
-                raise RuntimeError(f"Download failed: server returned HTTP {code}")
-
-        response_filename = await asyncio.to_thread(
-            _read_response_filename,
-            headers_path,
-        )
-        filename = response_filename or filename
-        if not filename:
-            raise RuntimeError("Download response did not provide a usable filename")
-        filepath = os.path.join(destination, filename)
-
-        if expected_sha256:
-            print(f"Verifying checksum after download: {filename}", flush=True)
-            actual_sha256 = await compute_sha256(body_path)
-            if actual_sha256 != expected_sha256.lower():
-                raise RuntimeError(
-                    "Checksum mismatch after download — temporary file deleted. "
-                    f"Expected {expected_sha256.lower()}, got {actual_sha256}"
-                )
-            print(f"Checksum verified: {filename}", flush=True)
-
-        await asyncio.to_thread(os.replace, body_path, filepath)
-        return filename
+    await asyncio.to_thread(os.replace, staging_path, final_path)
+    await _remove_file_if_present(control_path)
+    await _remove_file_if_present(control_temp_path)
+    return filename
 
 
 async def queue_download(
@@ -681,6 +838,8 @@ async def download_async(
     from_model_pack: bool = False,
     expected_sha256: str | None = None,
     filename: str | None = None,
+    expected_size_bytes: int | None = None,
+    civitai_file_id: str | None = None,
 ) -> bool:
     async with semaphore:
         type_name = t
@@ -708,15 +867,16 @@ async def download_async(
         parsed_url = urlparse.urlparse(url)
         hostname = parsed_url.hostname or ""
 
-        # CivitAI needs cURL. Hugging Face continues through aria2c below.
+        # Resolve a fresh signed URL immediately before starting CivitAI's aria2 job.
         if hostname in CIVITAI_HOSTS:
             try:
-                await _download_http(
+                await _download_civitai(
                     url,
                     destination,
                     filename=filename,
-                    headers=_get_civitai_headers(),
                     expected_sha256=expected_sha256,
+                    expected_size_bytes=expected_size_bytes,
+                    file_id=civitai_file_id,
                 )
                 await downloadHistory.update_status(id, DownloadStatus.COMPLETED)
                 res = _download_message(
@@ -730,7 +890,7 @@ async def download_async(
                 await manager.broadcast(res.model_dump_json())
                 log.info(f"Download completed: {name}")
                 return True
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - download boundary records failure
                 res = _download_message(
                     id,
                     name,
@@ -741,6 +901,7 @@ async def download_async(
                 )
                 await downloadHistory.update_status(id, DownloadStatus.FAILED)
                 await manager.broadcast(res.model_dump_json())
+                traceback.print_exception(e)
                 log.error(f"Download failed: {name} ({e})")
                 return False
 
@@ -828,7 +989,7 @@ async def download_async(
                 limit=1024 * 1024,  # 1MB limit to handle long progress lines
                 env=subprocess_env,
             )
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - subprocess boundary records failure
             res = _download_message(
                 id,
                 name,

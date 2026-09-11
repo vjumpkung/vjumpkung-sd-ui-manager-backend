@@ -7,5 +7,4 @@ python-dotenv
 rich==14.0.0
 uvicorn
 websockets
-curl-cffi==0.14.0
 tqdm

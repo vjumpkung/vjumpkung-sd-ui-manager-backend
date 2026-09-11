@@ -42,7 +42,7 @@ Key `.env` variables:
 
 **Static file serving:** `/_next` is mounted as a `StaticFiles` directory. All other non-`/api` and non-`/ws` paths fall through to `serve_nextjs()`, which tries to serve from `web/`, falls back to `web/index.html` for client-side routing. Paths starting with `api/` or `ws/` are explicitly rejected with 404 to avoid shadowing those routers.
 
-**Download flow:** `api.py` → `worker/download.py` → prefers the `hf` CLI for Hugging Face file URLs when it is available at download time, otherwise spawns `aria2c` (or `gdown` for Google Drive) → streams stdout to history/WebSocket. SHA256 or a URL hash is used to deduplicate downloads.
+**Download flow:** `api.py` → `worker/download.py` → resolves CivitAI metadata and a short-lived signed URL, then calls `scripts/civitai_download.py` in a worker thread so Windows event loops do not need asyncio subprocess support; the helper runs `aria2c`. Hugging Face file URLs prefer the `hf` CLI when available and otherwise use `aria2c`; Google Drive uses `gdown`. Status is streamed to history/WebSocket, and SHA256 or a URL hash is used to deduplicate downloads.
 
 **WebSocket:** `event_handler.py` manages connections. All status changes, log lines, and download progress broadcast to all connected clients at `/ws/{client_id}`.
 
@@ -60,7 +60,7 @@ Key `.env` variables:
 
 **Utils:**
 - `utils/generate_uuid.py` — UUID5 generation from URLs
-- `utils/checksum.py` — SHA256 helpers: `compute_sha256(filepath)` hashes a local file in a thread executor, `fetch_civitai_sha256(model_version_id, token)` fetches expected hash from CivitAI API, `fetch_hf_sha256(owner, repo, filepath, token)` fetches expected hash from HuggingFace Hub API
+- `utils/checksum.py` — SHA256 helpers: `compute_sha256(filepath)` hashes a local file in a thread executor and `fetch_hf_sha256(owner, repo, filepath, token)` fetches the expected hash from the Hugging Face Hub API. CivitAI file metadata is resolved in `worker/download.py` so its filename, size, file ID, and checksum stay consistent.
 - `utils/enums.py` — `DownloadStatus(str, Enum)` with values `IN_QUEUE`, `DOWNLOADING`, `RETRYING`, `COMPLETED`, `FAILED`
 - `utils/ws_messages.py` — Pydantic models for WebSocket message serialization: `DownloadMessage`/`DownloadData` (download events), `MonitorMessage`/`MonitorData` (process status), `LogMessage`/`LogData` (log lines). Use `model_dump_json()` to broadcast.
 
@@ -87,7 +87,7 @@ When working on FastAPI routes, Pydantic models, or any API-related code in this
 
 ## Key External Dependencies
 
-- `aria2c` must be installed on the system (used for ordinary HTTP downloads and as the Hugging Face fallback)
+- `aria2c` must be installed on the system (used for CivitAI and ordinary HTTP downloads, and as the Hugging Face fallback)
 - `hf` is optional; when the Hugging Face CLI is on `PATH`, Hugging Face file URLs use `hf download`
 - Shell scripts at `/notebooks/` or `/invokeai/` for start/stop operations (external, deployment-specific)
 - PyTorch (optional) — imported conditionally for CUDA/GPU detection; `ZIMAGE` UI type skips this
