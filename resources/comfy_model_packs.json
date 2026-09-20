@@ -303,42 +303,46 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ltx2_5.json"
     }
   ],
-  "QWEN Image": [
+  "Qwen Image": [
     {
-      "name": "QWEN Image fp8",
+      "name": "Qwen Image fp8",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_fp8.json"
     },
     {
-      "name": "QWEN Image Edit fp8",
+      "name": "Qwen Image Edit fp8",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_edit_fp8.json"
     },
     {
-      "name": "QWEN Image Edit 2509 fp8",
+      "name": "Qwen Image Edit 2509 fp8",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_edit_2509_fp8.json"
     },
     {
-      "name": "QWEN Image Edit 2511 fp8",
+      "name": "Qwen Image Edit 2511 fp8",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_edit_2511.json"
     },
     {
-      "name": "QWEN Image Edit 2511 int8 ConvRot",
+      "name": "Qwen Image Edit 2511 int8 ConvRot",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_edit_2511_int8_convrot.json"
     },
     {
-      "name": "QWEN Image Layered fp8",
+      "name": "Qwen Image Layered fp8",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_layered.json"
     },
     {
-      "name": "QWEN Image Layered int8 ConvRot",
+      "name": "Qwen Image Layered int8 ConvRot",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_layered_int8_convrot.json"
     },
     {
-      "name": "QWEN Image 2512 fp8",
+      "name": "Qwen Image 2512 fp8",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_2512_fp8.json"
     },
     {
-      "name": "QWEN Image 2512 int8 ConvRot",
+      "name": "Qwen Image 2512 int8 ConvRot",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_2512_int8_convrot.json"
+    },
+    {
+      "name": "Qwen Image 2.1",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/qwen_image_2_1.json"
     }
   ],
   "Kandinsky 5 Lite": [
