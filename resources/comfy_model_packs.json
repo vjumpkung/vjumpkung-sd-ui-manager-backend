@@ -593,6 +593,14 @@
     {
       "name": "Marigold V2",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/marigold_v2_0.json"
+    },
+    {
+      "name": "Ming Image 0.1 Design",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ming_image_design_int8_convrot.json"
+    },
+    {
+      "name": "Ming Image 0.1 Design Layer",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ming_image_design_layer_int8_convrot.json"
     }
   ]
 }
