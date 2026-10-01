@@ -152,7 +152,7 @@ async def _install_custom_node(repository_url: str) -> CustomNodeInstallResult:
         )
 
     await _run_command(
-        ["git", "clone", "--", repository_url, str(repository_path)],
+        ["git", "clone","--depth=1","--single-branch","--no-tags", "--", repository_url, str(repository_path)],
         custom_nodes_path,
     )
 
