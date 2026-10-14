@@ -63,11 +63,11 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_4b_fp4.json"
     },
     {
-      "name": "Flux.2 Klein 4B (distilled 4 steps)",
+      "name": "Flux.2 Klein 4B",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_4b.json"
     },
     {
-      "name": "Flux.2 Klein 4B int8 ConvRot (distilled 4 steps)",
+      "name": "Flux.2 Klein 4B int8 ConvRot",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_4b_int8_convrot.json"
     },
     {
@@ -79,11 +79,11 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_9b_fp4.json"
     },
     {
-      "name": "Flux.2 Klein 9B (distilled 4 steps)",
+      "name": "Flux.2 Klein 9B",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_9b.json"
     },
     {
-      "name": "Flux.2 Klein 9B int8 ConvRot (distilled 4 steps)",
+      "name": "Flux.2 Klein 9B int8 ConvRot",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_9b_int8_convrot.json"
     },
     {
@@ -543,6 +543,10 @@
     {
       "name": "Minimax H3 REF2VA Prune",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/minimax_h3_ref2va_pruned_int8_convrot.json"
+    },
+    {
+      "name": "FastH3 FL2VA",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/fasth3_int8_convrot.json"
     }
   ],
   "Others": [
@@ -584,7 +588,7 @@
     },
     {
       "name": "Microsoft TRELLIS.2",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/trellis_2.json"
+      "url": "https://raw.githubusercontent.com/vju mpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/trellis_2.json"
     },
     {
       "name": "Tencent Pixal3D",
