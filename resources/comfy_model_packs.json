@@ -95,6 +95,16 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux_2_klein_9b_kv_int8_convrot.json"
     }
   ],
+  "Flux.3": [
+    {
+      "name": "Flux.3 Klein Base",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux_3_klein_base.json"
+    },
+    {
+      "name": "Flux.3 Klein Distilled",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux_3_klein_distilled.json"
+    }
+  ],
   "HiDream": [
     {
       "name": "HiDream-I1 Full fp8",
@@ -401,6 +411,10 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/longcat_image.json"
     },
     {
+      "name": "Longcat Image Turbo",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/longcat_image_turbo.json"
+    },
+    {
       "name": "Longcat Image Edit",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/main/resource_list/longcat_image_edit.json"
     },
@@ -588,7 +602,7 @@
     },
     {
       "name": "Microsoft TRELLIS.2",
-      "url": "https://raw.githubusercontent.com/vju mpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/trellis_2.json"
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/trellis_2.json"
     },
     {
       "name": "Tencent Pixal3D",
