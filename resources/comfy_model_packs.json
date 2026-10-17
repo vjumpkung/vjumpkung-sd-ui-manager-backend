@@ -563,6 +563,16 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/fasth3_int8_convrot.json"
     }
   ],
+  "MOSS": [
+    {
+      "name": "MOSS Image Base",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/moss_base.json"
+    },
+    {
+      "name": "MOSS Image SFT",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/moss_sft.json"
+    }
+  ],
   "Others": [
     {
       "name": "Chroma-1 HD",
