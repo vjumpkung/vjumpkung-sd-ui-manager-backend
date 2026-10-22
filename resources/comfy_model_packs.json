@@ -269,10 +269,6 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ltx2_fp8.json"
     },
     {
-      "name": "LTX2 nvfp4",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ltx2_fp4.json"
-    },
-    {
       "name": "LTX2 fp8 (Split Version)",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ltx2_fp8_kj.json"
     },
@@ -379,16 +375,8 @@
   ],
   "Z-Image": [
     {
-      "name": "Z-Image Turbo",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/z_turbo.json"
-    },
-    {
       "name": "Z-Image Turbo int8 ConvRot",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/z_turbo_int8_convrot.json"
-    },
-    {
-      "name": "Z-Image",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/z_image.json"
     },
     {
       "name": "Z-Image int8 ConvRot",
@@ -435,10 +423,6 @@
   ],
   "Ideogram": [
     {
-      "name": "Ideogram 4",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ideogram_4.json"
-    },
-    {
       "name": "Ideogram 4 int8 ConvRot",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ideogram_4_int8_convrot.json"
     }
@@ -455,10 +439,6 @@
   ],
   "Boogu": [
     {
-      "name": "Boogu Image Edit",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/boogu_image_edit_fp8.json"
-    },
-    {
       "name": "Boogu Image Edit int8 ConvRot",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/boogu_image_edit_int8_convrot.json"
     },
@@ -467,26 +447,14 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/boogu_image_edit_turbo_int8_convrot.json"
     },
     {
-      "name": "Boogu Image Turbo",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/boogu_image_turbo_fp8.json"
-    },
-    {
       "name": "Boogu Image Turbo int8 ConvRot",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/boogu_image_turbo_int8_convrot.json"
     }
   ],
   "Krea 2": [
     {
-      "name": "Krea 2 Turbo",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/krea_2_turbo_fp8.json"
-    },
-    {
       "name": "Krea 2 Turbo int8 ConvRot",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/krea_2_turbo_int8_convrot.json"
-    },
-    {
-      "name": "Krea 2 Raw",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/krea_2_raw_fp8.json"
     },
     {
       "name": "Krea 2 Raw int8 ConvRot",
@@ -495,32 +463,16 @@
   ],
   "Mage Flow": [
     {
-      "name": "Mage Flow bf16",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/mage_flow.json"
-    },
-    {
       "name": "Mage Flow int8 ConvRot",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/mage_flow_int8_convrot.json"
-    },
-    {
-      "name": "Mage Flow Turbo bf16",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/mage_flow_turbo.json"
     },
     {
       "name": "Mage Flow Turbo int8 ConvRot",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/mage_flow_turbo_int8_convrot.json"
     },
     {
-      "name": "Mage Flow Edit bf16",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/mage_flow_edit.json"
-    },
-    {
       "name": "Mage Flow Edit int8 ConvRot",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/mage_flow_edit_int8_convrot.json"
-    },
-    {
-      "name": "Mage Flow Edit Turbo bf16",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/mage_flow_edit_turbo.json"
     },
     {
       "name": "Mage Flow Edit Turbo int8 ConvRot",
@@ -561,6 +513,10 @@
     {
       "name": "FastH3 FL2VA",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/fasth3_int8_convrot.json"
+    },
+    {
+      "name": "FastH3 Omni",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/fasth3_omni_int8_convrot.json"
     }
   ],
   "MOSS": [
@@ -637,6 +593,14 @@
     {
       "name": "Ming Image 0.1 Design Layer",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ming_image_design_layer_int8_convrot.json"
+    },
+    {
+      "name": "Fibo 2 Dev",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/fibo_2_dev.json"
+    },
+    {
+      "name": "Fibo 2 Edit Turbo",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/fibo_2_edit_turbo.json"
     }
   ]
 }
