@@ -1,6 +1,6 @@
 aiofiles==24.1.0
 fastapi
-gdown
+gdown==6.5.1
 httpx==0.28.1
 pydantic
 python-dotenv

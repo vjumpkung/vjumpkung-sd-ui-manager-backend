@@ -21,6 +21,21 @@ class DownloadMessage(BaseModel):
     data: DownloadData
 
 
+class TokenRequiredData(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
+    provider: Literal["civitai", "huggingface"]
+    reason: Literal["missing", "rejected"]
+    name: str
+    url: str
+    model_type: str
+
+
+class TokenRequiredMessage(BaseModel):
+    type: Literal["token_required"] = "token_required"
+    data: TokenRequiredData
+
+
 class MonitorData(BaseModel):
     status: str
 

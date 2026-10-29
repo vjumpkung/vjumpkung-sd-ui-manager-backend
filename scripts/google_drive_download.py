@@ -6,7 +6,7 @@ import subprocess
 def main(path: str, url: str) -> str:
     os.chdir(path)
     result = subprocess.run(
-        ["gdown", "-q", "--fuzzy", url],
+        ["gdown", "-q", url],
     )
     return "success" if result.returncode == 0 else "failed"
 

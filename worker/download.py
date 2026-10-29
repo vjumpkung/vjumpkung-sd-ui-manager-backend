@@ -18,7 +18,12 @@ from history_manager import downloadHistory
 from log_manager import log
 from utils.checksum import compute_sha256, fetch_hf_sha256
 from utils.enums import DownloadStatus
-from utils.ws_messages import DownloadData, DownloadMessage
+from utils.ws_messages import (
+    DownloadData,
+    DownloadMessage,
+    TokenRequiredData,
+    TokenRequiredMessage,
+)
 
 PYTHON = sys.executable
 CIVITAI_DOWNLOAD_SCRIPT = os.path.abspath(
@@ -45,6 +50,18 @@ forge_types_mapping = {
     "controlnet": "controlnet",
     "hypernetworks": "hypernetwork",
 }
+
+
+class TokenRequiredError(RuntimeError):
+    def __init__(
+        self,
+        provider: Literal["civitai", "huggingface"],
+        reason: Literal["missing", "rejected"],
+        message: str,
+    ):
+        self.provider = provider
+        self.reason = reason
+        super().__init__(message)
 
 
 class DownloadPreparation(BaseModel):
@@ -209,8 +226,10 @@ def _select_civitai_file(
 async def _fetch_civitai_target(url: str) -> CivitaiDownloadTarget:
     token = getattr(envs, "CIVITAI_TOKEN", "")
     if not token:
-        raise RuntimeError(
-            "CIVITAI_TOKEN is required; configure it before downloading CivitAI models"
+        raise TokenRequiredError(
+            "civitai",
+            "missing",
+            "CIVITAI_TOKEN is required; configure it before downloading CivitAI models",
         )
 
     version_id = _get_civitai_version_id(url)
@@ -227,7 +246,11 @@ async def _fetch_civitai_target(url: str) -> CivitaiDownloadTarget:
         raise RuntimeError("Could not fetch CivitAI model metadata") from exc
 
     if response.status_code in {401, 403}:
-        raise RuntimeError("CivitAI API token is invalid or lacks access to this model")
+        raise TokenRequiredError(
+            "civitai",
+            "rejected",
+            "CivitAI API token is invalid or lacks access to this model",
+        )
     if response.status_code != 200:
         raise RuntimeError(
             f"CivitAI metadata request failed with HTTP {response.status_code}"
@@ -302,6 +325,12 @@ async def prepare_download(
         civitai_target = await _fetch_civitai_target(url)
         expected_sha256 = civitai_target.expected_sha256
     else:
+        if hostname in HUGGINGFACE_HOSTS and not (
+            not getattr(envs, "HUGGINGFACE_TOKEN", "")
+            and shutil.which("hf") is not None
+            and _parse_huggingface_download_url(url) is not None
+        ):
+            await _check_huggingface_access(url)
         expected_sha256 = await _fetch_expected_sha256(url)
     if expected_sha256:
         expected_sha256 = expected_sha256.lower()
@@ -328,6 +357,36 @@ async def prepare_download(
         ),
         civitai_file_id=civitai_target.file_id if civitai_target else None,
     )
+
+
+def _redact_url(url: str) -> str:
+    parsed = urlparse.urlparse(url)
+    query = "&".join(
+        part
+        for part in parsed.query.split("&")
+        if urlparse.unquote_plus(part.partition("=")[0]).casefold() != "token"
+    )
+    return urlparse.urlunparse(
+        parsed._replace(netloc=parsed.netloc.rsplit("@", 1)[-1], query=query)
+    )
+
+
+async def broadcast_token_required(
+    error: TokenRequiredError, name: str, url: str, model_type: str
+) -> None:
+    message = TokenRequiredMessage(
+        data=TokenRequiredData(
+            provider=error.provider,
+            reason=error.reason,
+            name=name,
+            url=_redact_url(url),
+            model_type=model_type,
+        )
+    )
+    try:
+        await manager.broadcast(message.model_dump_json())
+    except Exception:
+        log.warning("Could not broadcast token requirement")
 
 
 def _download_message(
@@ -448,6 +507,54 @@ def _parse_huggingface_download_url(
     )
 
 
+async def _check_huggingface_access(url: str) -> None:
+    target = _parse_huggingface_download_url(url)
+    if target is None:
+        return
+
+    prefix = {"dataset": "datasets/", "space": "spaces/"}.get(target.repo_type, "")
+    current_url = (
+        f"https://huggingface.co/{prefix}{target.repo_id}/resolve/"
+        f"{urlparse.quote(target.revision, safe='')}/{urlparse.quote(target.filepath)}"
+    )
+    token = getattr(envs, "HUGGINGFACE_TOKEN", "")
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    try:
+        async with httpx.AsyncClient() as client:
+            for redirects in range(4):
+                response = await client.head(
+                    current_url, headers=headers, follow_redirects=False, timeout=15
+                )
+                if response.status_code not in CIVITAI_REDIRECT_STATUSES:
+                    break
+                location = response.headers.get("location")
+                if not location:
+                    return
+                next_url = urlparse.urljoin(current_url, location)
+                parsed = urlparse.urlparse(next_url)
+                if (
+                    parsed.scheme != "https"
+                    or parsed.hostname not in HUGGINGFACE_HOSTS
+                    or redirects == 3
+                ):
+                    return
+                current_url = next_url
+    except httpx.HTTPError:
+        log.warning("Could not check Hugging Face access")
+        return
+
+    if response.status_code in {401, 403}:
+        raise TokenRequiredError(
+            "huggingface",
+            "rejected" if token else "missing",
+            "Hugging Face denied access with the current token; the token may be invalid "
+            "or access to the gated model has not been granted"
+            if token
+            else "Hugging Face access token may be required; the model may be gated, "
+            "private, or the URL may be wrong",
+        )
+
+
 def _build_huggingface_cli_command(
     hf_executable: str,
     target: HuggingFaceDownloadTarget,
@@ -523,8 +630,10 @@ def _build_civitai_download_url(url: str, file_id: str, token: str) -> str:
 async def _resolve_civitai_download_url(url: str, file_id: str) -> str:
     token = getattr(envs, "CIVITAI_TOKEN", "")
     if not token:
-        raise RuntimeError(
-            "CIVITAI_TOKEN is required; configure it before downloading CivitAI models"
+        raise TokenRequiredError(
+            "civitai",
+            "missing",
+            "CIVITAI_TOKEN is required; configure it before downloading CivitAI models",
         )
 
     download_url = _build_civitai_download_url(url, file_id, token)
@@ -539,8 +648,10 @@ async def _resolve_civitai_download_url(url: str, file_id: str) -> str:
             ) as response,
         ):
             if response.status_code in {401, 403}:
-                raise RuntimeError(
-                    "CivitAI API token is invalid or lacks access to this model"
+                raise TokenRequiredError(
+                    "civitai",
+                    "rejected",
+                    "CivitAI API token is invalid or lacks access to this model",
                 )
             if response.status_code not in CIVITAI_REDIRECT_STATUSES:
                 raise RuntimeError(
@@ -901,6 +1012,8 @@ async def download_async(
                 )
                 await downloadHistory.update_status(id, DownloadStatus.FAILED)
                 await manager.broadcast(res.model_dump_json())
+                if isinstance(e, TokenRequiredError):
+                    await broadcast_token_required(e, name, original_url, type_name)
                 traceback.print_exception(e)
                 log.error(f"Download failed: {name} ({e})")
                 return False
@@ -980,13 +1093,13 @@ async def download_async(
 
         log.info(f"executing command: {_redact_command(cmd)}")
 
-        # create subprocess, redirecting stdout/stderr
+        # create subprocess in a worker thread so Windows selector event loops work
         try:
-            proc = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.STDOUT,
-                limit=1024 * 1024,  # 1MB limit to handle long progress lines
+            proc = await asyncio.to_thread(
+                subprocess.Popen,
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 env=subprocess_env,
             )
         except Exception as e:  # noqa: BLE001 - subprocess boundary records failure
@@ -1000,32 +1113,27 @@ async def download_async(
             )
             await downloadHistory.update_status(id, DownloadStatus.FAILED)
             await manager.broadcast(res.model_dump_json())
-            log.error(f"Download failed: {name} (exit code {e})")
+            log.error(f"Download failed: {name} (could not start process: {e!r})")
             return False
 
         try:
             # read lines as they come in
             assert proc.stdout is not None
             while True:
-                try:
-                    raw_line = await proc.stdout.readline()
-                except ValueError:
-                    # line exceeded StreamReader limit; read and discard the rest of the chunk
-                    await proc.stdout.read(1024 * 1024)
-                    continue
+                raw_line = await asyncio.to_thread(proc.stdout.readline, 1024 * 1024)
                 if not raw_line:
                     break
                 line = raw_line.decode("utf-8", errors="replace").strip("\n")
                 print(line, flush=True)
-
+            proc.stdout.close()
+            return_code = await asyncio.to_thread(proc.wait)
         except asyncio.CancelledError:
             # if someone cancels the task, kill the subprocess
             proc.kill()
-            await proc.wait()
+            await asyncio.to_thread(proc.wait)
             log.warning(f"Download cancelled: {name}")
             return False
 
-        return_code = await proc.wait()
         failure_reason = f"exit code {return_code}"
 
         if (
@@ -1090,6 +1198,11 @@ async def download_async(
             await downloadHistory.update_status(id, DownloadStatus.FAILED)
             await manager.broadcast(res.model_dump_json())
             log.error(f"Download failed: {name} ({failure_reason})")
+            if hostname in HUGGINGFACE_HOSTS:
+                try:
+                    await _check_huggingface_access(original_url)
+                except TokenRequiredError as e:
+                    await broadcast_token_required(e, name, original_url, type_name)
             return False
 
 
@@ -1116,14 +1229,23 @@ async def download_multiple(packs):
 
         async def queue_model(i):
             async with preflight_semaphore:
-                result = await queue_download(
-                    i["name"], str(i["url"]), i["type"], from_model_pack=True
-                )
+                try:
+                    result = await queue_download(
+                        i["name"], str(i["url"]), i["type"], from_model_pack=True
+                    )
+                except TokenRequiredError as e:
+                    log.warning(f"Could not queue download {i['name']}: {e}")
+                    await broadcast_token_required(
+                        e, i["name"], str(i["url"]), i["type"]
+                    )
+                    return i, None
             return i, result
 
         queue_results = await asyncio.gather(*(queue_model(i) for i in models_to_queue))
 
         for i, result in queue_results:
+            if result is None:
+                continue
             if result.task:
                 dl_lst.append(result.task)
             elif result.action == "duplicate":

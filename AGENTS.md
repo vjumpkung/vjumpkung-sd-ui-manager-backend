@@ -52,7 +52,7 @@ Key `.env` variables:
 
 **Download history:** `history_manager.py` — in-memory async dict tracking download status (`DownloadStatus` enum: `IN_QUEUE`, `DOWNLOADING`, `RETRYING`, `COMPLETED`, `FAILED`), keyed by UUID5 of the URL. `update_status` is typed to `DownloadStatus`.
 
-**Env tokens:** `env_manager.py` — runtime-mutable `CIVITAI_TOKEN` / `HUGGINGFACE_TOKEN` updated via `PUT /api/update_env/{civitai|huggingface}`.
+**Env tokens:** `env_manager.py` — runtime-mutable `CIVITAI_TOKEN` / `HUGGINGFACE_TOKEN` updated via `PUT /api/update_env/{civitai|huggingface}` with JSON body `{"value": ...}`. Token problems return HTTP 422 with detail code `TOKEN_REQUIRED` from `/api/download_custom_model`.
 
 **Export:** `worker/export_zip.py` — zips `OUTPUT_PATH` directory and streams it as a download via `GET /api/download-images`.
 
@@ -62,7 +62,7 @@ Key `.env` variables:
 - `utils/generate_uuid.py` — UUID5 generation from URLs
 - `utils/checksum.py` — SHA256 helpers: `compute_sha256(filepath)` hashes a local file in a thread executor and `fetch_hf_sha256(owner, repo, filepath, token)` fetches the expected hash from the Hugging Face Hub API. CivitAI file metadata is resolved in `worker/download.py` so its filename, size, file ID, and checksum stay consistent.
 - `utils/enums.py` — `DownloadStatus(str, Enum)` with values `IN_QUEUE`, `DOWNLOADING`, `RETRYING`, `COMPLETED`, `FAILED`
-- `utils/ws_messages.py` — Pydantic models for WebSocket message serialization: `DownloadMessage`/`DownloadData` (download events), `MonitorMessage`/`MonitorData` (process status), `LogMessage`/`LogData` (log lines). Use `model_dump_json()` to broadcast.
+- `utils/ws_messages.py` — Pydantic models for WebSocket message serialization: `DownloadMessage`/`DownloadData` (download events), `TokenRequiredMessage`/`TokenRequiredData` (token_required events), `MonitorMessage`/`MonitorData` (process status), `LogMessage`/`LogData` (log lines). Use `model_dump_json()` to broadcast.
 
 ## API Endpoints
 

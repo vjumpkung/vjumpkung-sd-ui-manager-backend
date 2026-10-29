@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Annotated, List, Literal, Optional
 
 import aiofiles
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field, HttpUrl, model_validator
 
@@ -16,7 +16,13 @@ from config.load_config import OUTPUT_PATH, RUNPOD_POD_ID, UI_TYPE
 from env_manager import envs
 from history_manager import downloadHistory
 from worker.check_process import programStatus
-from worker.download import download_multiple, queue_download
+from worker.download import (
+    TokenRequiredError,
+    _redact_url,
+    broadcast_token_required,
+    download_multiple,
+    queue_download,
+)
 from worker.export_zip import _create_zip_file
 from worker.install_custom_node import (
     install_custom_nodes,
@@ -38,6 +44,10 @@ class ModelDownloadRequest(BaseModel):
     name: Optional[str]
     url: HttpUrl
     model_type: str
+
+
+class UpdateEnvRequest(BaseModel):
+    value: str
 
 
 class DownloadSelectedDto(BaseModel):
@@ -146,12 +156,12 @@ async def getModelPacks():
 
 @router.put("/update_env/{api_key_type}", status_code=204)
 async def update_api_key(
-    request: Request, api_key_type: Literal["civitai", "huggingface"], value: str
+    api_key_type: Literal["civitai", "huggingface"], request: UpdateEnvRequest
 ):
     if api_key_type == "civitai":
-        envs.CIVITAI_TOKEN = value
+        envs.CIVITAI_TOKEN = request.value
     elif api_key_type == "huggingface":
-        envs.set_huggingface_token(value)
+        envs.set_huggingface_token(request.value)
 
 
 @router.post("/download_selected")
@@ -179,7 +189,10 @@ async def download_selected(
 async def import_models(request: List[ImportModel]):
     try:
         for t in request:
-            await queue_download(t.name, str(t.url), t.type)
+            try:
+                await queue_download(t.name, str(t.url), t.type)
+            except TokenRequiredError as e:
+                await broadcast_token_required(e, t.name, str(t.url), t.type)
 
         return JSONResponse(
             {
@@ -198,9 +211,8 @@ async def import_models(request: List[ImportModel]):
 async def download_custom_model(
     request: ModelDownloadRequest,
 ):
+    model_name = request.model_type if request.name in ("", None) else request.name
     try:
-        model_name = request.model_type if request.name in ("", None) else request.name
-
         result = await queue_download(model_name, str(request.url), request.model_type)
 
         if result.action == "retrying":
@@ -234,6 +246,19 @@ async def download_custom_model(
             }
         )
 
+    except TokenRequiredError as e:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": "TOKEN_REQUIRED",
+                "provider": e.provider,
+                "reason": e.reason,
+                "message": str(e),
+                "name": model_name,
+                "url": _redact_url(str(request.url)),
+                "model_type": request.model_type,
+            },
+        )
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Error processing request: {str(e)}"

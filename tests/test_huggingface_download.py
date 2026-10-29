@@ -1,4 +1,4 @@
-import asyncio
+import io
 import os
 import tempfile
 import unittest
@@ -12,10 +12,9 @@ from worker import download
 class FakeProcess:
     def __init__(self, return_code: int = 0):
         self.return_code = return_code
-        self.stdout = asyncio.StreamReader()
-        self.stdout.feed_eof()
+        self.stdout = io.BytesIO()
 
-    async def wait(self) -> int:
+    def wait(self) -> int:
         return self.return_code
 
     def kill(self) -> None:
@@ -95,7 +94,7 @@ class HuggingFaceDownloadTests(unittest.IsolatedAsyncioTestCase):
         captured_command = None
         captured_env = None
 
-        async def create_process(*command, **kwargs):
+        def create_process(command, **kwargs):
             nonlocal captured_command, captured_env
             captured_command = command
             captured_env = kwargs["env"]
@@ -111,8 +110,8 @@ class HuggingFaceDownloadTests(unittest.IsolatedAsyncioTestCase):
                 patch.object(download, "RESOURCE_PATH", temp_dir),
                 patch.object(download.shutil, "which", return_value="/usr/bin/hf"),
                 patch.object(
-                    download.asyncio,
-                    "create_subprocess_exec",
+                    download.subprocess,
+                    "Popen",
                     side_effect=create_process,
                 ),
                 patch.object(
@@ -150,7 +149,7 @@ class HuggingFaceDownloadTests(unittest.IsolatedAsyncioTestCase):
     async def test_aria2c_is_used_when_hf_cli_is_missing(self) -> None:
         captured_command = None
 
-        async def create_process(*command, **kwargs):
+        def create_process(command, **kwargs):
             nonlocal captured_command
             captured_command = command
             return FakeProcess()
@@ -160,8 +159,8 @@ class HuggingFaceDownloadTests(unittest.IsolatedAsyncioTestCase):
                 patch.object(download, "RESOURCE_PATH", temp_dir),
                 patch.object(download.shutil, "which", return_value=None),
                 patch.object(
-                    download.asyncio,
-                    "create_subprocess_exec",
+                    download.subprocess,
+                    "Popen",
                     side_effect=create_process,
                 ),
                 patch.object(
