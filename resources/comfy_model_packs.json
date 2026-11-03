@@ -601,6 +601,10 @@
     {
       "name": "Fibo 2 Edit Turbo",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/fibo_2_edit_turbo.json"
+    },
+    {
+      "name": "P-H3-Image",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/p_h3_image_int8_convrot.json"
     }
   ]
 }
