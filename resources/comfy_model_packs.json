@@ -29,10 +29,6 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux_fp8_list.json"
     },
     {
-      "name": "Flux.1 Dev int8 ConvRot",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux_int8_convrot_list.json"
-    },
-    {
       "name": "Flux.1 Krea Dev fp8",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux_krea.json"
     },
@@ -47,20 +43,12 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux_2_dev.json"
     },
     {
-      "name": "Flux.2 Dev int8 ConvRot",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux_2_dev_int8_convrot.json"
-    },
-    {
       "name": "Flux.2 Klein 4B Base",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_4b_base.json"
     },
     {
       "name": "Flux.2 Klein 4B Base int8 ConvRot",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_4b_base_int8_convrot.json"
-    },
-    {
-      "name": "Flux.2 Klein 4B nvfp4",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_4b_fp4.json"
     },
     {
       "name": "Flux.2 Klein 4B",
@@ -73,10 +61,6 @@
     {
       "name": "Flux.2 Klein 9B Base",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_9b_base.json"
-    },
-    {
-      "name": "Flux.2 Klein 9B nvfp4",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_9b_fp4.json"
     },
     {
       "name": "Flux.2 Klein 9B",
@@ -517,6 +501,14 @@
     {
       "name": "FastH3 Omni",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/fasth3_omni_int8_convrot.json"
+    },
+    {
+      "name": "P-H3-Image",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/p_h3_image_int8_convrot.json"
+    },
+    {
+      "name": "Minimax H3 Image",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/minimax_h3_image_int8_convrot.json"
     }
   ],
   "MOSS": [
@@ -601,10 +593,6 @@
     {
       "name": "Fibo 2 Edit Turbo",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/fibo_2_edit_turbo.json"
-    },
-    {
-      "name": "P-H3-Image",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/p_h3_image_int8_convrot.json"
     }
   ]
 }
