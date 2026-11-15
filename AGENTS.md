@@ -54,6 +54,8 @@ Key `.env` variables:
 
 **Env tokens:** `env_manager.py` — runtime-mutable `CIVITAI_TOKEN` / `HUGGINGFACE_TOKEN` updated via `PUT /api/update_env/{civitai|huggingface}` with JSON body `{"value": ...}`. Token problems return HTTP 422 with detail code `TOKEN_REQUIRED` from `/api/download_custom_model`.
 
+**Custom node install flow:** `POST /api/install_custom_node` creates a job (`create_install_job`) and runs it as a background asyncio task (`start_install_job` -> `run_install_job` -> `install_custom_nodes`), returning HTTP 202 with a job snapshot. Nodes install sequentially behind `_install_lock`; each item reports `queued` -> `installing` -> `installed` / `already_installed` / `failed`, and ComfyUI is restarted once at the end if anything was installed (a restart failure is reported in the job message, not as a job failure). Progress is broadcast over the WebSocket as `custom_node` (item status), `custom_node_log` (one command output line) and `custom_node_job` (job status: `queued`, `running`, `completed`, `partial`, `failed`) events; clients map rows by the request `index`, not the URL. Jobs are kept in memory only (last 20, finished ones pruned first) and `GET /api/install_custom_node/{job_id}` returns the snapshot, including the last 200 log lines per node.
+
 **Export:** `worker/export_zip.py` — zips `OUTPUT_PATH` directory and streams it as a download via `GET /api/download-images`.
 
 **Logging:** `log_manager.py` — Rich-based console logger (no file output); `worker/create_log_file.py` — ensures log files exist on startup.
@@ -62,7 +64,7 @@ Key `.env` variables:
 - `utils/generate_uuid.py` — UUID5 generation from URLs
 - `utils/checksum.py` — SHA256 helpers: `compute_sha256(filepath)` hashes a local file in a thread executor and `fetch_hf_sha256(owner, repo, filepath, token)` fetches the expected hash from the Hugging Face Hub API. CivitAI file metadata is resolved in `worker/download.py` so its filename, size, file ID, and checksum stay consistent.
 - `utils/enums.py` — `DownloadStatus(str, Enum)` with values `IN_QUEUE`, `DOWNLOADING`, `RETRYING`, `COMPLETED`, `FAILED`
-- `utils/ws_messages.py` — Pydantic models for WebSocket message serialization: `DownloadMessage`/`DownloadData` (download events), `TokenRequiredMessage`/`TokenRequiredData` (token_required events), `MonitorMessage`/`MonitorData` (process status), `LogMessage`/`LogData` (log lines). Use `model_dump_json()` to broadcast.
+- `utils/ws_messages.py` — Pydantic models for WebSocket message serialization: `DownloadMessage`/`DownloadData` (download events), `TokenRequiredMessage`/`TokenRequiredData` (token_required events), `CustomNodeMessage`/`CustomNodeData`, `CustomNodeLogMessage`/`CustomNodeLogData`, `CustomNodeJobMessage`/`CustomNodeJobData` (custom_node, custom_node_log, custom_node_job events), `MonitorMessage`/`MonitorData` (process status), `LogMessage`/`LogData` (log lines). Use `model_dump_json()` to broadcast.
 
 ## API Endpoints
 
@@ -78,7 +80,8 @@ Key `.env` variables:
 | POST   | `/api/import_models`         | Queue multiple model downloads                                      |
 | POST   | `/api/download_selected`     | Queue selected pack models                                          |
 | POST   | `/api/restart`               | Trigger UI process restart                                          |
-| POST   | `/api/install_custom_node`   | Install one or more ComfyUI custom nodes, then restart ComfyUI once |
+| POST   | `/api/install_custom_node`   | Queue a background install of one or more ComfyUI custom nodes (202 + `job_id`); progress over WebSocket; restarts ComfyUI once at the end |
+| GET    | `/api/install_custom_node/{job_id}` | Job snapshot (per-node status + last 200 log lines); 404 if unknown |
 | WS     | `/ws/{client_id}`            | WebSocket for real-time events                                      |
 
 ## Skills

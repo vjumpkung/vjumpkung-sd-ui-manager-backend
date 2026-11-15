@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field, HttpUrl, model_validator
 from config.load_config import OUTPUT_PATH, RUNPOD_POD_ID, UI_TYPE
 from env_manager import envs
 from history_manager import downloadHistory
+from utils.ws_messages import CustomNodeItemStatus, CustomNodeJobStatus
 from worker.check_process import programStatus
 from worker.download import (
     TokenRequiredError,
@@ -25,7 +26,9 @@ from worker.download import (
 )
 from worker.export_zip import _create_zip_file
 from worker.install_custom_node import (
-    install_custom_nodes,
+    CustomNodeJob,
+    get_install_job,
+    start_install_job,
 )
 from worker.program_logs import programLog
 from worker.restart_program import restart_program
@@ -79,18 +82,42 @@ class CustomNodeInstallRequest(BaseModel):
 
 
 class CustomNodeInstallItemResponse(BaseModel):
+    index: int
     url: str
     repository: str | None
-    status: Literal["installed", "already_installed", "failed"]
+    status: CustomNodeItemStatus
     dependency_method: Literal["install.py", "requirements.txt", "none"] | None
     message: str
+    logs: list[str] = Field(default_factory=list)
 
 
-class CustomNodeInstallResponse(BaseModel):
-    status: Literal["completed", "partial", "failed"]
+class CustomNodeInstallJobResponse(BaseModel):
+    job_id: str
+    status: CustomNodeJobStatus
     message: str
     restarted: bool
     results: list[CustomNodeInstallItemResponse]
+
+
+def _job_response(job: CustomNodeJob) -> CustomNodeInstallJobResponse:
+    return CustomNodeInstallJobResponse(
+        job_id=job.job_id,
+        status=job.status,
+        message=job.message,
+        restarted=job.restarted,
+        results=[
+            CustomNodeInstallItemResponse(
+                index=item.index,
+                url=item.url,
+                repository=item.repository,
+                status=item.status,
+                dependency_method=item.dependency_method,
+                message=item.message,
+                logs=list(item.logs),
+            )
+            for item in job.items
+        ],
+    )
 
 
 router = APIRouter(prefix="/api")
@@ -275,54 +302,35 @@ async def restart():
     await restart_program()
 
 
-@router.post("/install_custom_node", response_model=CustomNodeInstallResponse)
+@router.post(
+    "/install_custom_node",
+    status_code=202,
+    response_model=CustomNodeInstallJobResponse,
+)
 async def install_comfyui_custom_node(
     request: CustomNodeInstallRequest,
-) -> CustomNodeInstallResponse:
+) -> CustomNodeInstallJobResponse:
     if UI_TYPE != "COMFY":
         raise HTTPException(
             status_code=400,
             detail="Custom nodes can only be installed when UI_TYPE is COMFY.",
         )
 
-    result = await install_custom_nodes(request.repository_urls())
-    installed_count = sum(item.status == "installed" for item in result.results)
-    already_installed_count = sum(
-        item.status == "already_installed" for item in result.results
-    )
-    failed_count = sum(item.status == "failed" for item in result.results)
+    return _job_response(start_install_job(request.repository_urls()))
 
-    if failed_count == len(result.results):
-        status = "failed"
-    elif failed_count:
-        status = "partial"
-    else:
-        status = "completed"
 
-    message = (
-        f"Processed {len(result.results)} custom node(s): "
-        f"{installed_count} installed, "
-        f"{already_installed_count} already installed, "
-        f"{failed_count} failed."
-    )
-    if result.restarted:
-        message = f"{message} ComfyUI was restarted."
+@router.get(
+    "/install_custom_node/{job_id}",
+    response_model=CustomNodeInstallJobResponse,
+)
+async def get_custom_node_install_job(job_id: str) -> CustomNodeInstallJobResponse:
+    job = get_install_job(job_id)
+    if job is None:
+        raise HTTPException(
+            status_code=404, detail="Custom node installation job not found."
+        )
 
-    return CustomNodeInstallResponse(
-        status=status,
-        message=message,
-        restarted=result.restarted,
-        results=[
-            CustomNodeInstallItemResponse(
-                url=item.url,
-                repository=item.repository,
-                status=item.status,
-                dependency_method=item.dependency_method,
-                message=item.message,
-            )
-            for item in result.results
-        ],
-    )
+    return _job_response(job)
 
 
 @router.get("/download-images")

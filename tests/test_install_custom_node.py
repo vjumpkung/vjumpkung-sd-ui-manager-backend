@@ -1,14 +1,18 @@
 import asyncio
+import json
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 from worker import install_custom_node
 
 
 class FakeProcess:
+    returncode = None
+
     def __init__(self, output: str = "", return_code: int = 0):
         self.stdout = asyncio.StreamReader()
         if output:
@@ -239,6 +243,230 @@ class InstallCustomNodeTests(unittest.IsolatedAsyncioTestCase):
                     )
 
         restart.assert_not_awaited()
+
+
+class CustomNodeJobTests(unittest.IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        install_custom_node._jobs.clear()
+        self.addCleanup(install_custom_node._jobs.clear)
+
+        self.broadcast = AsyncMock()
+        manager_patch = patch.object(
+            install_custom_node,
+            "manager",
+            new=SimpleNamespace(broadcast=self.broadcast),
+        )
+        manager_patch.start()
+        self.addCleanup(manager_patch.stop)
+
+    def broadcast_messages(self, message_type: str) -> list[dict]:
+        messages = [json.loads(call.args[0]) for call in self.broadcast.await_args_list]
+        return [message for message in messages if message["type"] == message_type]
+
+    async def test_job_records_command_output_and_completes(self) -> None:
+        async def create_process(*command, **kwargs):
+            if command[:2] == ("git", "clone"):
+                Path(command[-1]).mkdir()
+                return FakeProcess("line one\nprogress 10%\rprogress 100%\n")
+            return FakeProcess()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with (
+                patch.object(install_custom_node, "COMFYUI_PATH", temp_dir),
+                patch.object(
+                    install_custom_node.asyncio,
+                    "create_subprocess_exec",
+                    side_effect=create_process,
+                ),
+                patch.object(
+                    install_custom_node,
+                    "_is_comfyui_running",
+                    new=AsyncMock(return_value=False),
+                ),
+            ):
+                job = install_custom_node.create_install_job(
+                    ["https://github.com/owner/logged-node.git"]
+                )
+                self.assertEqual(job.status, "queued")
+                self.assertEqual(job.items[0].status, "queued")
+                self.assertEqual(job.items[0].repository, "logged-node")
+
+                await install_custom_node.run_install_job(job)
+
+        item = job.items[0]
+        self.assertEqual(job.status, "completed")
+        self.assertFalse(job.restarted)
+        self.assertEqual(item.status, "installed")
+        self.assertEqual(item.dependency_method, "none")
+        self.assertIn("line one", item.logs)
+        self.assertIn("progress 100%", item.logs)
+        self.assertNotIn("progress 10%", item.logs)
+
+        log_messages = self.broadcast_messages("custom_node_log")
+        self.assertIn("line one", [message["data"]["line"] for message in log_messages])
+        self.assertEqual(log_messages[0]["data"]["job_id"], job.job_id)
+        self.assertEqual(log_messages[0]["data"]["index"], 0)
+        self.assertEqual(
+            [m["data"]["status"] for m in self.broadcast_messages("custom_node")],
+            ["queued", "installing", "installed"],
+        )
+        self.assertEqual(
+            [m["data"]["status"] for m in self.broadcast_messages("custom_node_job")],
+            ["queued", "running", "completed"],
+        )
+
+    async def test_unexpected_error_fails_only_that_item(self) -> None:
+        with (
+            patch.object(
+                install_custom_node,
+                "_install_custom_node",
+                new=AsyncMock(
+                    side_effect=[
+                        RuntimeError("boom"),
+                        install_custom_node.CustomNodeInstallResult(
+                            repository="second-node", dependency_method="none"
+                        ),
+                    ]
+                ),
+            ),
+            patch.object(
+                install_custom_node,
+                "_is_comfyui_running",
+                new=AsyncMock(return_value=False),
+            ),
+        ):
+            job = install_custom_node.create_install_job(
+                [
+                    "https://github.com/owner/first-node.git",
+                    "https://github.com/owner/second-node.git",
+                ]
+            )
+            await install_custom_node.run_install_job(job)
+
+        self.assertEqual(job.items[0].status, "failed")
+        self.assertEqual(job.items[0].message, "Unexpected error: boom")
+        self.assertEqual(job.items[1].status, "installed")
+        self.assertEqual(job.status, "partial")
+
+    async def test_restart_failure_does_not_fail_the_job(self) -> None:
+        async def create_process(*command, **kwargs):
+            if command[:2] == ("git", "clone"):
+                Path(command[-1]).mkdir()
+            return FakeProcess()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with (
+                patch.object(install_custom_node, "COMFYUI_PATH", temp_dir),
+                patch.object(
+                    install_custom_node.asyncio,
+                    "create_subprocess_exec",
+                    side_effect=create_process,
+                ),
+                patch.object(
+                    install_custom_node,
+                    "_is_comfyui_running",
+                    new=AsyncMock(return_value=True),
+                ),
+                patch.object(
+                    install_custom_node,
+                    "restart_program",
+                    new=AsyncMock(side_effect=RuntimeError("restart exploded")),
+                ),
+            ):
+                job = install_custom_node.create_install_job(
+                    ["https://github.com/owner/restart-node.git"]
+                )
+                await install_custom_node.run_install_job(job)
+
+        self.assertEqual(job.status, "completed")
+        self.assertFalse(job.restarted)
+        self.assertEqual(job.items[0].status, "installed")
+        self.assertIn("restart failed", job.message)
+        self.assertIn("restart exploded", job.message)
+
+    async def test_broadcast_failure_does_not_stop_the_job(self) -> None:
+        self.broadcast.side_effect = RuntimeError("socket closed")
+
+        async def create_process(*command, **kwargs):
+            if command[:2] == ("git", "clone"):
+                Path(command[-1]).mkdir()
+            return FakeProcess("some output\n")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with (
+                patch.object(install_custom_node, "COMFYUI_PATH", temp_dir),
+                patch.object(
+                    install_custom_node.asyncio,
+                    "create_subprocess_exec",
+                    side_effect=create_process,
+                ),
+                patch.object(
+                    install_custom_node,
+                    "_is_comfyui_running",
+                    new=AsyncMock(return_value=False),
+                ),
+            ):
+                job = install_custom_node.create_install_job(
+                    ["https://github.com/owner/quiet-node.git"]
+                )
+                await install_custom_node.run_install_job(job)
+
+        self.assertEqual(job.status, "completed")
+        self.assertEqual(job.items[0].status, "installed")
+        self.assertIn("some output", job.items[0].logs)
+
+    async def test_start_install_job_runs_in_background(self) -> None:
+        with (
+            patch.object(
+                install_custom_node,
+                "_install_custom_node",
+                new=AsyncMock(
+                    return_value=install_custom_node.CustomNodeInstallResult(
+                        repository="background-node", dependency_method="none"
+                    )
+                ),
+            ),
+            patch.object(
+                install_custom_node,
+                "_is_comfyui_running",
+                new=AsyncMock(return_value=False),
+            ),
+        ):
+            job = install_custom_node.start_install_job(
+                ["https://github.com/owner/background-node.git"]
+            )
+            self.assertIs(install_custom_node.get_install_job(job.job_id), job)
+            self.assertEqual(len(install_custom_node.active_install_tasks), 1)
+
+            await asyncio.gather(*install_custom_node.active_install_tasks)
+
+        self.assertTrue(job.finished)
+        self.assertEqual(job.status, "completed")
+        self.assertEqual(len(install_custom_node.active_install_tasks), 0)
+        self.assertIsNone(install_custom_node.get_install_job("missing"))
+
+    async def test_prunes_oldest_finished_jobs_only(self) -> None:
+        url = "https://github.com/owner/pruned-node.git"
+        max_jobs = install_custom_node.MAX_JOBS
+
+        first_job = install_custom_node.create_install_job([url])
+        first_job.status = "completed"
+        for _ in range(max_jobs + 5):
+            job = install_custom_node.create_install_job([url])
+            job.status = "completed"
+
+        self.assertLessEqual(len(install_custom_node._jobs), max_jobs)
+        self.assertNotIn(first_job.job_id, install_custom_node._jobs)
+        self.assertIn(job.job_id, install_custom_node._jobs)
+
+        install_custom_node._jobs.clear()
+        unfinished = [
+            install_custom_node.create_install_job([url]) for _ in range(max_jobs + 3)
+        ]
+        self.assertEqual(len(install_custom_node._jobs), max_jobs + 3)
+        self.assertTrue(
+            all(item.job_id in install_custom_node._jobs for item in unfinished)
+        )
 
 
 if __name__ == "__main__":
