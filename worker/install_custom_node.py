@@ -101,6 +101,7 @@ class CustomNodeJob:
     status: str = "queued"
     message: str = ""
     restarted: bool = False
+    created_at: int = field(default_factory=lambda: int(time.time() * 1000))
 
     @property
     def finished(self) -> bool:
@@ -907,3 +908,7 @@ def start_install_job(repository_urls: list[str]) -> CustomNodeJob:
 
 def get_install_job(job_id: str) -> CustomNodeJob | None:
     return _jobs.get(job_id)
+
+
+def list_install_jobs() -> list[CustomNodeJob]:
+    return list(reversed(_jobs.values()))

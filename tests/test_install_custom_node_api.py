@@ -86,6 +86,28 @@ class InstallCustomNodeApiTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(context.exception.status_code, 404)
 
+    async def test_lists_job_summaries_newest_first_without_logs(self) -> None:
+        first_job = install_custom_node.create_install_job([INSTALLED_URL])
+        second_job = install_custom_node.create_install_job([INSTALLED_URL, FAILED_URL])
+        first_job.status = "completed"
+        second_job.items[0].logs.append("Cloning into example")
+
+        results = await api.list_custom_node_install_jobs()
+
+        self.assertEqual(
+            [job.job_id for job in results], [second_job.job_id, first_job.job_id]
+        )
+        self.assertEqual(
+            [job.created_at for job in results],
+            [second_job.created_at, first_job.created_at],
+        )
+        self.assertEqual(results[1].status, "completed")
+        self.assertEqual(len(results[0].results), 2)
+        self.assertNotIn("logs", results[0].results[0].model_dump())
+
+    async def test_lists_no_jobs_when_none_exist(self) -> None:
+        self.assertEqual(await api.list_custom_node_install_jobs(), [])
+
 
 class InstallCustomNodeHttpTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -122,7 +144,22 @@ class InstallCustomNodeHttpTests(unittest.TestCase):
 
         self.assertEqual(found.status_code, 200)
         self.assertEqual(found.json()["job_id"], job.job_id)
+        self.assertEqual(found.json()["created_at"], job.created_at)
         self.assertEqual(missing.status_code, 404)
+
+    def test_get_list_returns_job_summaries_without_logs(self) -> None:
+        job = install_custom_node.create_install_job([INSTALLED_URL])
+        job.items[0].logs.append("Cloning into example")
+
+        response = self.client.get("/api/install_custom_node")
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(len(body), 1)
+        self.assertEqual(body[0]["job_id"], job.job_id)
+        self.assertEqual(body[0]["created_at"], job.created_at)
+        self.assertEqual(body[0]["results"][0]["url"], INSTALLED_URL)
+        self.assertNotIn("logs", body[0]["results"][0])
 
 
 if __name__ == "__main__":

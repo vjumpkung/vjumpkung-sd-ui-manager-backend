@@ -939,6 +939,24 @@ class CustomNodeJobTests(unittest.IsolatedAsyncioTestCase):
             all(item.job_id in install_custom_node._jobs for item in unfinished)
         )
 
+    async def test_job_records_creation_time_in_epoch_milliseconds(self) -> None:
+        with patch.object(
+            install_custom_node.time, "time", return_value=1700000000.123
+        ):
+            job = install_custom_node.create_install_job([REPOSITORY_URL])
+
+        self.assertEqual(job.created_at, 1700000000123)
+
+    async def test_lists_jobs_newest_first(self) -> None:
+        first_job = install_custom_node.create_install_job([REPOSITORY_URL])
+        second_job = install_custom_node.create_install_job([REPOSITORY_URL])
+        third_job = install_custom_node.create_install_job([REPOSITORY_URL])
+
+        self.assertEqual(
+            [job.job_id for job in install_custom_node.list_install_jobs()],
+            [third_job.job_id, second_job.job_id, first_job.job_id],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

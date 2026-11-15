@@ -28,6 +28,7 @@ from worker.export_zip import _create_zip_file
 from worker.install_custom_node import (
     CustomNodeJob,
     get_install_job,
+    list_install_jobs,
     start_install_job,
 )
 from worker.program_logs import programLog
@@ -81,13 +82,16 @@ class CustomNodeInstallRequest(BaseModel):
         return [str(url) for url in urls if url is not None]
 
 
-class CustomNodeInstallItemResponse(BaseModel):
+class CustomNodeInstallItemSummaryResponse(BaseModel):
     index: int
     url: str
     repository: str | None
     status: CustomNodeItemStatus
     dependency_method: Literal["install.py", "requirements.txt", "none"] | None
     message: str
+
+
+class CustomNodeInstallItemResponse(CustomNodeInstallItemSummaryResponse):
     logs: list[str] = Field(default_factory=list)
 
 
@@ -96,7 +100,38 @@ class CustomNodeInstallJobResponse(BaseModel):
     status: CustomNodeJobStatus
     message: str
     restarted: bool
+    created_at: int
     results: list[CustomNodeInstallItemResponse]
+
+
+class CustomNodeInstallJobSummaryResponse(BaseModel):
+    job_id: str
+    status: CustomNodeJobStatus
+    message: str
+    restarted: bool
+    created_at: int
+    results: list[CustomNodeInstallItemSummaryResponse]
+
+
+def _job_summary_response(job: CustomNodeJob) -> CustomNodeInstallJobSummaryResponse:
+    return CustomNodeInstallJobSummaryResponse(
+        job_id=job.job_id,
+        status=job.status,
+        message=job.message,
+        restarted=job.restarted,
+        created_at=job.created_at,
+        results=[
+            CustomNodeInstallItemSummaryResponse(
+                index=item.index,
+                url=item.url,
+                repository=item.repository,
+                status=item.status,
+                dependency_method=item.dependency_method,
+                message=item.message,
+            )
+            for item in job.items
+        ],
+    )
 
 
 def _job_response(job: CustomNodeJob) -> CustomNodeInstallJobResponse:
@@ -105,6 +140,7 @@ def _job_response(job: CustomNodeJob) -> CustomNodeInstallJobResponse:
         status=job.status,
         message=job.message,
         restarted=job.restarted,
+        created_at=job.created_at,
         results=[
             CustomNodeInstallItemResponse(
                 index=item.index,
@@ -317,6 +353,14 @@ async def install_comfyui_custom_node(
         )
 
     return _job_response(start_install_job(request.repository_urls()))
+
+
+@router.get(
+    "/install_custom_node",
+    response_model=list[CustomNodeInstallJobSummaryResponse],
+)
+async def list_custom_node_install_jobs() -> list[CustomNodeInstallJobSummaryResponse]:
+    return [_job_summary_response(job) for job in list_install_jobs()]
 
 
 @router.get(
