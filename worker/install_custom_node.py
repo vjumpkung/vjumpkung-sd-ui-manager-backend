@@ -1,6 +1,9 @@
 import asyncio
+import json
 import re
 import sys
+import tempfile
+import time
 import uuid
 from collections import deque
 from collections.abc import Awaitable, Callable
@@ -27,6 +30,9 @@ from worker.restart_program import restart_program
 
 LOG_BUFFER_LINES = 200
 MAX_JOBS = 20
+PROTECTED_PACKAGES = frozenset(
+    {"numpy", "torch", "torchaudio", "torchvision", "transformers"}
+)
 
 
 class CustomNodeInstallError(Exception):
@@ -42,6 +48,7 @@ class CustomNodeInstallResult:
     repository: str
     dependency_method: str
     restarted: bool = False
+    failed_requirements: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -51,6 +58,22 @@ class CustomNodeBatchItemResult:
     status: str
     dependency_method: str | None
     message: str
+    failed_requirements: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class RequirementEntry:
+    line: str
+    args: tuple[str, ...]
+    name: str | None
+    cwd: Path
+
+
+@dataclass
+class RequirementsPlan:
+    entries: list[RequirementEntry]
+    options: list[str]
+    warnings: list[str]
 
 
 @dataclass(frozen=True)
@@ -86,6 +109,27 @@ class CustomNodeJob:
 
 _install_lock = asyncio.Lock()
 _repository_name_pattern = re.compile(r"^[A-Za-z0-9._-]+$")
+_name_separator_pattern = re.compile(r"[-_.]+")
+_comment_pattern = re.compile(r"(^|\s+)#.*$")
+_egg_pattern = re.compile(r"#egg=([A-Za-z0-9][A-Za-z0-9._-]*)")
+_wheel_filename_pattern = re.compile(r"([^/\\\s]+)\.whl(?:[?#]|$)", re.IGNORECASE)
+_direct_reference_pattern = re.compile(
+    r"^[A-Za-z0-9][A-Za-z0-9._-]*\s*(?:\[[^\]]*\])?\s*@"
+)
+_package_name_pattern = re.compile(
+    r"^([A-Za-z0-9][A-Za-z0-9._-]*)(?=$|[\s\[(<>=!~;@,])"
+)
+_option_pattern = re.compile(r"^(--?[A-Za-z][A-Za-z0-9-]*)(?:\s*=\s*|\s+)?(.*)$")
+_per_requirement_option_pattern = re.compile(r"\s--")
+_value_options = {
+    "-i": "--index-url",
+    "--index-url": "--index-url",
+    "--extra-index-url": "--extra-index-url",
+    "-f": "--find-links",
+    "--find-links": "--find-links",
+    "-c": "--constraint",
+    "--constraint": "--constraint",
+}
 _jobs: dict[str, CustomNodeJob] = {}
 active_install_tasks: set[asyncio.Task[None]] = set()
 
@@ -153,6 +197,132 @@ def _find_repository_file(repository_path: Path, filename: str) -> Path | None:
     )
 
 
+def _normalize_package_name(name: str) -> str:
+    return _name_separator_pattern.sub("-", name).lower()
+
+
+def _requirement_lines(text: str) -> list[str]:
+    lines: list[str] = []
+    pending = ""
+
+    # The trailing sentinel flushes a file that ends with a continuation.
+    for raw_line in [*text.removeprefix("﻿").splitlines(), ""]:
+        line = raw_line.rstrip()
+        if line.endswith("\\") and not line.lstrip().startswith("#"):
+            pending += line[:-1]
+            continue
+
+        cleaned = _comment_pattern.sub("", pending + line).strip()
+        pending = ""
+        if cleaned:
+            lines.append(cleaned)
+
+    return lines
+
+
+def _requirement_name(spec: str) -> str | None:
+    egg = _egg_pattern.search(spec)
+    if egg:
+        return _normalize_package_name(egg.group(1))
+
+    if not _direct_reference_pattern.match(spec):
+        wheel = _wheel_filename_pattern.search(spec)
+        if wheel:
+            filename = unquote(wheel.group(1))
+            return _normalize_package_name(filename.split("-", maxsplit=1)[0])
+
+    name = _package_name_pattern.match(spec)
+    if name:
+        return _normalize_package_name(name.group(1))
+
+    return None
+
+
+def _add_option(options: list[str], *group: str) -> None:
+    if any(tuple(options[i : i + len(group)]) == group for i in range(len(options))):
+        return
+    options.extend(group)
+
+
+def _merge_requirements_plan(
+    target: RequirementsPlan, source: RequirementsPlan
+) -> None:
+    target.entries.extend(source.entries)
+    target.warnings.extend(source.warnings)
+
+    source_options = iter(source.options)
+    for option in source_options:
+        if option in _value_options.values():
+            _add_option(target.options, option, next(source_options))
+        else:
+            _add_option(target.options, option)
+
+
+def _load_requirements(path: Path, seen: set[Path] | None = None) -> RequirementsPlan:
+    plan = RequirementsPlan(entries=[], options=[], warnings=[])
+    seen = set() if seen is None else seen
+    resolved = path.resolve()
+    if resolved in seen:
+        return plan
+    seen.add(resolved)
+
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError as error:
+        plan.warnings.append(f"Could not read {path.name}: {error}")
+        return plan
+
+    for line in _requirement_lines(text):
+        if not line.startswith("-"):
+            spec, *extra = _per_requirement_option_pattern.split(line, maxsplit=1)
+            if extra:
+                plan.warnings.append(f"Ignoring per-requirement options in: {line}")
+            spec = spec.strip()
+            plan.entries.append(
+                RequirementEntry(
+                    line=spec,
+                    args=(spec,),
+                    name=_requirement_name(spec),
+                    cwd=path.parent,
+                )
+            )
+            continue
+
+        match = _option_pattern.match(line)
+        flag, value = (match.group(1), match.group(2).strip()) if match else (line, "")
+
+        if flag in {"-r", "--requirement"} and value:
+            included = path.parent / value
+            if included.is_file():
+                _merge_requirements_plan(plan, _load_requirements(included, seen))
+            else:
+                plan.warnings.append(f"Included requirements file not found: {value}")
+        elif flag in _value_options and value:
+            option = _value_options[flag]
+            if option == "--constraint" and not value.startswith(
+                ("http://", "https://")
+            ):
+                value = str((path.parent / value).resolve())
+            _add_option(plan.options, option, value)
+        elif flag == "--no-index" and not value:
+            _add_option(plan.options, "--no-index")
+        elif flag == "--pre" and not value:
+            _add_option(plan.options, "--prerelease=allow")
+        elif flag in {"-e", "--editable"} and value:
+            plan.entries.append(
+                RequirementEntry(
+                    line=f"-e {value}",
+                    args=("-e", value),
+                    name=_requirement_name(value),
+                    cwd=path.parent,
+                )
+            )
+        else:
+            plan.warnings.append(f"Ignoring unsupported requirements option: {line}")
+
+    return plan
+
+
 async def _run_command(
     command: list[str],
     cwd: Path,
@@ -197,6 +367,176 @@ async def _run_command(
         raise CustomNodeInstallError(message)
 
 
+async def _emit(on_line: Callable[[str], Awaitable[None]] | None, line: str) -> None:
+    if on_line is not None:
+        await on_line(line)
+    else:
+        log.debug(line)
+
+
+def _elapsed(started: float) -> str:
+    return f"{time.monotonic() - started:.1f}s"
+
+
+def _summarize_requirements(requirements: tuple[str, ...]) -> str:
+    summary = ", ".join(requirements[:5])
+    if len(requirements) > 5:
+        summary = f"{summary} and {len(requirements) - 5} more"
+    return summary
+
+
+async def _installed_protected_versions(
+    cwd: Path,
+    on_line: Callable[[str], Awaitable[None]] | None = None,
+) -> dict[str, str]:
+    output: list[str] = []
+
+    async def collect(line: str) -> None:
+        output.append(line)
+
+    failure: CustomNodeInstallError | None = None
+    try:
+        await _run_command(["uv", "pip", "list", "--format", "json"], cwd, collect)
+    except CustomNodeInstallError as error:
+        failure = error
+
+    json_index = next(
+        (i for i in reversed(range(len(output))) if output[i].startswith("[")), None
+    )
+    for index, line in enumerate(output):
+        if index != json_index:
+            await _emit(on_line, line)
+
+    prefix = "Could not read installed package versions"
+    if failure is not None:
+        raise CustomNodeInstallError(f"{prefix}: {failure}") from failure
+    if json_index is None:
+        raise CustomNodeInstallError(f"{prefix}: uv pip list returned no JSON.")
+
+    try:
+        versions: dict[str, str] = {}
+        for package in json.loads(output[json_index]):
+            name = _normalize_package_name(package["name"])
+            if name in PROTECTED_PACKAGES:
+                versions[name] = str(package["version"])
+    except (ValueError, KeyError, TypeError) as error:
+        raise CustomNodeInstallError(f"{prefix}: {error!r}") from error
+
+    return versions
+
+
+async def _install_requirements(
+    requirements_file: Path,
+    repository_path: Path,
+    on_line: Callable[[str], Awaitable[None]] | None = None,
+) -> tuple[str, ...]:
+    plan = await asyncio.to_thread(_load_requirements, requirements_file)
+    entries = plan.entries
+    total = len(entries)
+    relative = requirements_file.relative_to(repository_path).as_posix()
+    installable = [entry for entry in entries if entry.name not in PROTECTED_PACKAGES]
+
+    await _emit(
+        on_line, f"Found requirements.txt at {relative} ({total} requirement(s))"
+    )
+    for warning in plan.warnings:
+        await _emit(on_line, warning)
+    if plan.options:
+        await _emit(
+            on_line,
+            f"Requirements options applied to every install: {' '.join(plan.options)}",
+        )
+    await _emit(
+        on_line,
+        "Protected packages (never installed or changed): "
+        f"{', '.join(sorted(PROTECTED_PACKAGES))}",
+    )
+
+    versions: dict[str, str] | None = None
+    pins: list[str] = []
+    if installable:
+        await _emit(on_line, "Reading installed versions: uv pip list --format json")
+        versions = await _installed_protected_versions(
+            requirements_file.parent, on_line
+        )
+        pins = [f"{name}=={versions[name]}" for name in sorted(versions)]
+        pinned = ", ".join(pins) if pins else "none installed"
+        await _emit(on_line, f"Pinned protected versions: {pinned}")
+        missing = sorted(PROTECTED_PACKAGES - versions.keys())
+        if missing:
+            await _emit(
+                on_line, f"Protected packages not installed: {', '.join(missing)}"
+            )
+    else:
+        await _emit(on_line, "Nothing to install from requirements.txt.")
+
+    started = time.monotonic()
+    installed_count = 0
+    skipped_count = 0
+    failed: list[str] = []
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        constraint_args: list[str] = []
+        if pins:
+            constraints_file = Path(temp_dir) / "constraints.txt"
+            await asyncio.to_thread(
+                constraints_file.write_text, "\n".join(pins) + "\n", encoding="utf-8"
+            )
+            constraint_args = ["-c", str(constraints_file)]
+
+        for number, entry in enumerate(entries, start=1):
+            prefix = f"[{number}/{total}]"
+
+            if entry.name in PROTECTED_PACKAGES:
+                skipped_count += 1
+                if versions is None:
+                    reason = "protected"
+                elif entry.name in versions:
+                    version = versions[entry.name]
+                    reason = f"protected, installed {entry.name}=={version}"
+                else:
+                    reason = "protected, not installed"
+                await _emit(on_line, f"{prefix} SKIPPED {entry.line} ({reason})")
+                continue
+
+            await _emit(on_line, f"{prefix} Installing {entry.line}")
+            entry_started = time.monotonic()
+            try:
+                await _run_command(
+                    ["uv", "pip", "install", *constraint_args, *plan.options]
+                    + list(entry.args),
+                    entry.cwd,
+                    on_line,
+                )
+            except CustomNodeInstallError as error:
+                failed.append(entry.line)
+                reason = str(error).split("\n", maxsplit=1)[0]
+                elapsed = _elapsed(entry_started)
+                await _emit(
+                    on_line, f"{prefix} FAILED {entry.line}: {reason} ({elapsed})"
+                )
+            else:
+                installed_count += 1
+                elapsed = _elapsed(entry_started)
+                await _emit(on_line, f"{prefix} OK {entry.line} ({elapsed})")
+
+    await _emit(
+        on_line,
+        f"Dependencies finished in {_elapsed(started)}: {installed_count} installed, "
+        f"{skipped_count} skipped (protected), {len(failed)} failed",
+    )
+    for line in failed:
+        await _emit(on_line, f"Failed requirement: {line}")
+
+    if installable and not installed_count:
+        raise CustomNodeInstallError(
+            f"Could not install any requirements from {relative}: "
+            f"{_summarize_requirements(tuple(failed))}"
+        )
+
+    return tuple(failed)
+
+
 async def _install_custom_node(
     repository_url: str,
     on_line: Callable[[str], Awaitable[None]] | None = None,
@@ -234,6 +574,7 @@ async def _install_custom_node(
         _find_repository_file, repository_path, "install.py"
     )
     dependency_method = "none"
+    failed_requirements: tuple[str, ...] = ()
 
     if install_script is not None:
         if on_line is not None:
@@ -247,20 +588,15 @@ async def _install_custom_node(
         _find_repository_file, repository_path, "requirements.txt"
     )
     if requirements_file is not None:
-        if on_line is not None:
-            await on_line(
-                f"Installing {requirements_file.relative_to(repository_path)} with uv"
-            )
-        await _run_command(
-            ["uv", "pip", "install", "-r", str(requirements_file)],
-            requirements_file.parent,
-            on_line,
+        failed_requirements = await _install_requirements(
+            requirements_file, repository_path, on_line
         )
         dependency_method = "requirements.txt"
 
     return CustomNodeInstallResult(
         repository=repository_name,
         dependency_method=dependency_method,
+        failed_requirements=failed_requirements,
     )
 
 
@@ -282,6 +618,7 @@ async def install_custom_node(repository_url: str) -> CustomNodeInstallResult:
         repository=result.repository,
         dependency_method=result.dependency_method,
         restarted=restarted,
+        failed_requirements=result.failed_requirements,
     )
 
 
@@ -343,12 +680,20 @@ async def install_custom_nodes(
                     message=f"Unexpected error: {error}",
                 )
             else:
+                message = f"Installed {result.repository}."
+                if result.failed_requirements:
+                    message = (
+                        f"Installed {result.repository}, but "
+                        f"{len(result.failed_requirements)} requirement(s) failed: "
+                        f"{_summarize_requirements(result.failed_requirements)}"
+                    )
                 item_result = CustomNodeBatchItemResult(
                     url=repository_url,
                     repository=result.repository,
                     status="installed",
                     dependency_method=result.dependency_method,
-                    message=f"Installed {result.repository}.",
+                    message=message,
+                    failed_requirements=result.failed_requirements,
                 )
 
             results.append(item_result)
@@ -380,10 +725,14 @@ def summarize_install(
         item.status == "already_installed" for item in result.results
     )
     failed_count = sum(item.status == "failed" for item in result.results)
+    failed_requirements_count = sum(
+        item.status == "installed" and bool(item.failed_requirements)
+        for item in result.results
+    )
 
     if failed_count == len(result.results):
         status = "failed"
-    elif failed_count:
+    elif failed_count or failed_requirements_count:
         status = "partial"
     else:
         status = "completed"
@@ -394,6 +743,11 @@ def summarize_install(
         f"{already_installed_count} already installed, "
         f"{failed_count} failed."
     )
+    if failed_requirements_count:
+        message = (
+            f"{message} {failed_requirements_count} installed node(s) "
+            "have failed requirements."
+        )
     if result.restarted:
         message = f"{message} ComfyUI was restarted."
     if result.restart_error:
