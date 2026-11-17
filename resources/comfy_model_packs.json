@@ -593,6 +593,14 @@
     {
       "name": "Fibo 2 Edit Turbo",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/fibo_2_edit_turbo.json"
+    },
+    {
+      "name": "PAN2",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/pan2.json"
+    },
+    {
+      "name": "RelayVSR",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/relayvsr.json"
     }
   ]
 }
