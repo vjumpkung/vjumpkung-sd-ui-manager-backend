@@ -521,6 +521,20 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/moss_sft.json"
     }
   ],
+  "ANIMA": [
+    {
+      "name": "ANIMA Base v1.0",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/anima.json"
+    },
+    {
+      "name": "ANIMA Aesthetic v1.1",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/anima_aesthetic.json"
+    },
+    {
+      "name": "Anima Turbo v1.1",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/anima_turbo.json"
+    }
+  ],
   "Others": [
     {
       "name": "Chroma-1 HD",
@@ -529,14 +543,6 @@
     {
       "name": "Omnigen 2",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/omnigen_2.json"
-    },
-    {
-      "name": "ANIMA Base v1.0",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/anima.json"
-    },
-    {
-      "name": "ANIMA Base v1.0 int8 ConvRot",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/anima_int8_convrot.json"
     },
     {
       "name": "Capybara 0.1",
@@ -573,6 +579,10 @@
     {
       "name": "SenseNova U1.5 8B MoT",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/sensenova.json"
+    },
+    {
+      "name": "SenseNova U1.6 8B MoT",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/sensenova_1_6.json"
     },
     {
       "name": "Marigold V2",
