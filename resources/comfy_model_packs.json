@@ -47,16 +47,8 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_4b_base.json"
     },
     {
-      "name": "Flux.2 Klein 4B Base int8 ConvRot",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_4b_base_int8_convrot.json"
-    },
-    {
       "name": "Flux.2 Klein 4B",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_4b.json"
-    },
-    {
-      "name": "Flux.2 Klein 4B int8 ConvRot",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_4b_int8_convrot.json"
     },
     {
       "name": "Flux.2 Klein 9B Base",
@@ -67,16 +59,8 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_9b.json"
     },
     {
-      "name": "Flux.2 Klein 9B int8 ConvRot",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux2_klein_9b_int8_convrot.json"
-    },
-    {
       "name": "Flux.2 Klein 9B KV",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/main/resource_list/flux_2_klein_9b_kv.json"
-    },
-    {
-      "name": "Flux.2 Klein 9B KV int8 ConvRot",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/flux_2_klein_9b_kv_int8_convrot.json"
     }
   ],
   "Flux.3": [
@@ -91,36 +75,32 @@
   ],
   "HiDream": [
     {
-      "name": "HiDream-I1 Full fp8",
+      "name": "HiDream-I1 Full",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hidream-full.json"
     },
     {
-      "name": "HiDream-I1 Dev fp8",
+      "name": "HiDream-I1 Dev",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hidream-dev.json"
     },
     {
-      "name": "HiDream-I1 Fast fp8",
+      "name": "HiDream-I1 Fast",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hidream-fast.json"
     },
     {
-      "name": "HiDream-E1 bf16",
+      "name": "HiDream-E1",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hidream-e1_full.json"
+    },
+    {
+      "name": "HiDream-E1.1",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hidream-e1_1.json"
     },
     {
       "name": "HiDream-O1",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hidream_o1.json"
     },
     {
-      "name": "HiDream-O1 int8 ConvRot",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hidream_o1_int8_convrot.json"
-    },
-    {
       "name": "HiDream-O1 Dev",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hidream_o1_dev.json"
-    },
-    {
-      "name": "HiDream-O1 Dev int8 ConvRot",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/hidream_o1_dev_int8_convrot.json"
     }
   ],
   "Hunyuan Video": [
@@ -151,24 +131,12 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_t2v_14B_fp16.json"
     },
     {
-      "name": "WAN2.1 14B T2V 480p int8 ConvRot",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_t2v_14B_int8_convrot.json"
-    },
-    {
       "name": "WAN2.1 I2V 480p fp16",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_i2v_480p_14B_fp16.json"
     },
     {
-      "name": "WAN2.1 I2V 480p int8 ConvRot",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_i2v_480p_14B_int8_convrot.json"
-    },
-    {
       "name": "WAN2.1 I2V 720p fp16",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_i2v_720p_14B_fp16.json"
-    },
-    {
-      "name": "WAN2.1 I2V 720p int8 ConvRot",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_i2v_720p_14B_int8_convrot.json"
     },
     {
       "name": "WAN2.1 VACE 1.3B fp16",
@@ -177,10 +145,6 @@
     {
       "name": "WAN2.1 VACE 14B fp16",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_vace_14B_fp16.json"
-    },
-    {
-      "name": "WAN2.1 VACE 14B int8 ConvRot",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan2.1_vace_14B_int8_convrot.json"
     },
     {
       "name": "WAN2.1 VACE 14B fp16 Kijai",
@@ -211,24 +175,12 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan22_5B_ti2v.json"
     },
     {
-      "name": "WAN2.2 TI2V 5B int8 ConvRot",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan22_5B_ti2v_int8_convrot.json"
-    },
-    {
       "name": "WAN2.2 T2V 14B fp8",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan22_14B_t2v.json"
     },
     {
-      "name": "WAN2.2 T2V 14B int8 ConvRot",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan22_14B_t2v_int8_convrot.json"
-    },
-    {
       "name": "WAN2.2 I2V 14B fp8",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan22_14B_i2v.json"
-    },
-    {
-      "name": "WAN2.2 I2V 14B int8 ConvRot",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/wan22_14B_i2v_int8_convrot.json"
     },
     {
       "name": "WAN2.1 Alpha",
@@ -236,10 +188,6 @@
     },
     {
       "name": "WAN2.1 SCAIL 2",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/main/resource_list/scail_2.json"
-    },
-    {
-      "name": "WAN2.1 SCAIL 2 int8 ConvRot",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/scail_2_int8_convrot.json"
     },
     {
@@ -535,6 +483,20 @@
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/anima_turbo.json"
     }
   ],
+  "Ming Design": [
+    {
+      "name": "Ming Image 0.1 Design",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ming_image_design_int8_convrot.json"
+    },
+    {
+      "name": "Ming Image 0.2 Design",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ming_image_design_0_2_int8_convrot.json"
+    },
+    {
+      "name": "Ming Image 0.1 Design Layer",
+      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ming_image_design_layer_int8_convrot.json"
+    }
+  ],
   "Others": [
     {
       "name": "Chroma-1 HD",
@@ -551,10 +513,6 @@
     {
       "name": "HUMO",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/main/resource_list/humo.json"
-    },
-    {
-      "name": "HUMO int8 ConvRot",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/humo_int8_convrot.json"
     },
     {
       "name": "FireRed Image Edit 1.1",
@@ -587,14 +545,6 @@
     {
       "name": "Marigold V2",
       "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/marigold_v2_0.json"
-    },
-    {
-      "name": "Ming Image 0.1 Design",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ming_image_design_int8_convrot.json"
-    },
-    {
-      "name": "Ming Image 0.1 Design Layer",
-      "url": "https://raw.githubusercontent.com/vjumpkung/vjump-runpod-notebooks-and-script/refs/heads/main/resource_list/ming_image_design_layer_int8_convrot.json"
     },
     {
       "name": "Fibo 2 Dev",
